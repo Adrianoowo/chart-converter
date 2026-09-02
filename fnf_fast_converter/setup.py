@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fnf_fast_converter",
-    version="1.0.0",
+    version="1.0.1",
     description="High-Speed Native Rock Band CON to Clone Hero Converter",
     packages=find_packages(),
     install_requires=[
