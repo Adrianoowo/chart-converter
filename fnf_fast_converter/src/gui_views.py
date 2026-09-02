@@ -213,6 +213,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
         parent: Any,
         config: AppConfig,
         on_config_changed: Callable[[], None],
+        on_collapse: Optional[Callable[[], None]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
@@ -225,10 +226,38 @@ class AdvancedSettingsCard(ctk.CTkFrame):
         )
         self.config = config
         self.on_config_changed = on_config_changed
+        self.on_collapse = on_collapse
         self._build_ui()
 
     def _build_ui(self) -> None:
         self.columnconfigure((1, 3, 5), weight=1)
+
+        # Header bar with title and collapse button
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        header_frame.grid(row=0, column=0, columnspan=6, sticky="ew", padx=16, pady=(10, 4))
+        header_frame.columnconfigure(0, weight=1)
+
+        lbl_header = ctk.CTkLabel(
+            header_frame,
+            text="⚙ Advanced Configuration",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=COLOR_TEXT_MAIN,
+        )
+        lbl_header.grid(row=0, column=0, sticky="w")
+
+        if self.on_collapse:
+            btn_close = ctk.CTkButton(
+                header_frame,
+                text="▲ Collapse",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                fg_color="#27272a",
+                hover_color="#3f3f46",
+                text_color=COLOR_TEXT_MAIN,
+                height=26,
+                width=90,
+                command=self.on_collapse,
+            )
+            btn_close.grid(row=0, column=1, sticky="e")
 
         # 1. Worker Threads
         lbl_workers = ctk.CTkLabel(
@@ -237,7 +266,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             text_color=COLOR_TEXT_MAIN,
         )
-        lbl_workers.grid(row=0, column=0, padx=(16, 6), pady=12, sticky="w")
+        lbl_workers.grid(row=1, column=0, padx=(16, 6), pady=(8, 12), sticky="w")
 
         self.slider_workers = ctk.CTkSlider(
             self,
@@ -248,7 +277,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             progress_color=COLOR_ACCENT,
         )
         self.slider_workers.set(self.config.worker_threads)
-        self.slider_workers.grid(row=0, column=1, padx=4, pady=12, sticky="ew")
+        self.slider_workers.grid(row=1, column=1, padx=4, pady=(8, 12), sticky="ew")
 
         self.lbl_workers_val = ctk.CTkLabel(
             self,
@@ -257,7 +286,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             width=28,
             text_color=COLOR_TEXT_MAIN,
         )
-        self.lbl_workers_val.grid(row=0, column=2, padx=(2, 16), pady=12)
+        self.lbl_workers_val.grid(row=1, column=2, padx=(2, 16), pady=(8, 12))
 
         # 2. Audio Stem Threads
         lbl_stems = ctk.CTkLabel(
@@ -266,7 +295,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             text_color=COLOR_TEXT_MAIN,
         )
-        lbl_stems.grid(row=0, column=3, padx=(8, 6), pady=12, sticky="w")
+        lbl_stems.grid(row=1, column=3, padx=(8, 6), pady=(8, 12), sticky="w")
 
         self.slider_stems = ctk.CTkSlider(
             self,
@@ -277,7 +306,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             progress_color=COLOR_ACCENT,
         )
         self.slider_stems.set(self.config.stem_threads)
-        self.slider_stems.grid(row=0, column=4, padx=4, pady=12, sticky="ew")
+        self.slider_stems.grid(row=1, column=4, padx=4, pady=(8, 12), sticky="ew")
 
         self.lbl_stems_val = ctk.CTkLabel(
             self,
@@ -286,7 +315,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             width=28,
             text_color=COLOR_TEXT_MAIN,
         )
-        self.lbl_stems_val.grid(row=0, column=5, padx=(2, 16), pady=12)
+        self.lbl_stems_val.grid(row=1, column=5, padx=(2, 16), pady=(8, 12))
 
         # 3. Charter Name
         lbl_charter = ctk.CTkLabel(
@@ -295,7 +324,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             text_color=COLOR_TEXT_MAIN,
         )
-        lbl_charter.grid(row=1, column=0, padx=(16, 6), pady=(0, 12), sticky="w")
+        lbl_charter.grid(row=2, column=0, padx=(16, 6), pady=(0, 12), sticky="w")
 
         self.entry_charter = ctk.CTkEntry(
             self,
@@ -306,7 +335,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             width=140,
         )
         self.entry_charter.insert(0, self.config.charter)
-        self.entry_charter.grid(row=1, column=1, padx=4, pady=(0, 12), sticky="w")
+        self.entry_charter.grid(row=2, column=1, padx=4, pady=(0, 12), sticky="w")
         self.entry_charter.bind("<FocusOut>", lambda e: self._on_charter_changed())
         self.entry_charter.bind("<Return>", lambda e: self._on_charter_changed())
 
@@ -317,7 +346,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             text_color=COLOR_TEXT_MAIN,
         )
-        lbl_theme.grid(row=1, column=3, padx=(8, 6), pady=(0, 12), sticky="w")
+        lbl_theme.grid(row=2, column=3, padx=(8, 6), pady=(0, 12), sticky="w")
 
         self.opt_theme = ctk.CTkOptionMenu(
             self,
@@ -330,7 +359,7 @@ class AdvancedSettingsCard(ctk.CTkFrame):
             width=120,
         )
         self.opt_theme.set(self.config.dark_theme)
-        self.opt_theme.grid(row=1, column=4, padx=4, pady=(0, 12), sticky="w")
+        self.opt_theme.grid(row=2, column=4, padx=4, pady=(0, 12), sticky="w")
 
     def _on_workers_changed(self, val: float) -> None:
         int_val = int(round(val))
@@ -367,6 +396,7 @@ class QueueToolbarView(ctk.CTkFrame):
         on_retry_failed: Callable[[], None],
         on_start_conversion: Callable[[], None],
         on_cancel_conversion: Callable[[], None],
+        on_select_all: Optional[Callable[[], None]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, fg_color="transparent", **kwargs)
@@ -377,6 +407,7 @@ class QueueToolbarView(ctk.CTkFrame):
         self.on_retry_failed = on_retry_failed
         self.on_start_conversion = on_start_conversion
         self.on_cancel_conversion = on_cancel_conversion
+        self.on_select_all = on_select_all
         self._is_converting = False
         self._build_ui()
 
@@ -391,7 +422,7 @@ class QueueToolbarView(ctk.CTkFrame):
             command=self.on_add_files,
             width=110,
         )
-        self.btn_add_files.pack(side="left", padx=(0, 6))
+        self.btn_add_files.pack(side="left", padx=(0, 4))
 
         self.btn_add_folder = ctk.CTkButton(
             self,
@@ -403,6 +434,17 @@ class QueueToolbarView(ctk.CTkFrame):
             width=115,
         )
         self.btn_add_folder.pack(side="left", padx=4)
+
+        self.btn_select_all = ctk.CTkButton(
+            self,
+            text="☑ Select All",
+            font=ctk.CTkFont(size=12),
+            fg_color="#27272a",
+            hover_color="#3f3f46",
+            command=self._on_select_all_clicked,
+            width=105,
+        )
+        self.btn_select_all.pack(side="left", padx=4)
 
         self.btn_remove_sel = ctk.CTkButton(
             self,
@@ -422,7 +464,7 @@ class QueueToolbarView(ctk.CTkFrame):
             fg_color="#27272a",
             hover_color="#3f3f46",
             command=self.on_retry_failed,
-            width=110,
+            width=105,
         )
         self.btn_retry_failed.pack(side="left", padx=4)
 
@@ -433,7 +475,7 @@ class QueueToolbarView(ctk.CTkFrame):
             fg_color="#27272a",
             hover_color="#3f3f46",
             command=self.on_clear_all,
-            width=85,
+            width=80,
         )
         self.btn_clear_all.pack(side="left", padx=4)
 
@@ -449,6 +491,55 @@ class QueueToolbarView(ctk.CTkFrame):
             height=34,
         )
         self.btn_main_action.pack(side="right")
+
+        # Total Files Counter Badge Frame
+        self.frame_counter = ctk.CTkFrame(
+            self,
+            fg_color="#18181b",
+            corner_radius=6,
+            border_width=1,
+            border_color=COLOR_BORDER,
+            height=34,
+        )
+        self.frame_counter.pack(side="right", padx=(0, 10))
+
+        self.lbl_counter = ctk.CTkLabel(
+            self.frame_counter,
+            text="Total: 0 files",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            padx=12,
+            pady=4,
+        )
+        self.lbl_counter.pack(expand=True)
+
+    def _on_select_all_clicked(self) -> None:
+        if self.on_select_all:
+            self.on_select_all()
+
+    def update_counter(self, total_count: int, selected_count: int = 0) -> None:
+        """Update total and selected files counter display."""
+        if total_count == 0:
+            self.lbl_counter.configure(
+                text="Total: 0 files",
+                text_color=COLOR_TEXT_MUTED,
+            )
+            self.btn_select_all.configure(text="☑ Select All")
+        elif selected_count > 0:
+            self.lbl_counter.configure(
+                text=f"Total: {total_count} files ({selected_count} selected)",
+                text_color=COLOR_TEXT_MAIN,
+            )
+            if selected_count >= total_count:
+                self.btn_select_all.configure(text="☐ Deselect All")
+            else:
+                self.btn_select_all.configure(text="☑ Select All")
+        else:
+            self.lbl_counter.configure(
+                text=f"Total: {total_count} files",
+                text_color=COLOR_TEXT_MAIN,
+            )
+            self.btn_select_all.configure(text="☑ Select All")
 
     def _on_main_action_clicked(self) -> None:
         if self._is_converting:
@@ -467,6 +558,7 @@ class QueueToolbarView(ctk.CTkFrame):
             )
             self.btn_add_files.configure(state="disabled")
             self.btn_add_folder.configure(state="disabled")
+            self.btn_select_all.configure(state="disabled")
             self.btn_clear_all.configure(state="disabled")
             self.btn_retry_failed.configure(state="disabled")
             self.btn_remove_sel.configure(state="disabled")
@@ -478,6 +570,7 @@ class QueueToolbarView(ctk.CTkFrame):
             )
             self.btn_add_files.configure(state="normal")
             self.btn_add_folder.configure(state="normal")
+            self.btn_select_all.configure(state="normal")
             self.btn_clear_all.configure(state="normal")
             self.btn_retry_failed.configure(state="normal")
             self.btn_remove_sel.configure(state="normal")
@@ -706,6 +799,15 @@ class QueueRowView(ctk.CTkFrame):
         )
         self.menu.add_separator()
         self.menu.add_command(
+            label="☑ Select All Songs (Ctrl+A)",
+            command=lambda: self.on_context_action(self.item.id, "select_all"),
+        )
+        self.menu.add_command(
+            label="☐ Deselect All Songs",
+            command=lambda: self.on_context_action(self.item.id, "deselect_all"),
+        )
+        self.menu.add_separator()
+        self.menu.add_command(
             label="⚠ View Error Details",
             command=lambda: self.on_context_action(self.item.id, "view_error"),
         )
@@ -821,6 +923,8 @@ class QueueTableView(ctk.CTkFrame):
                     on_select_toggle=self._handle_select_toggle,
                     on_context_action=self.on_context_action,
                 )
+                if item.id in self.selected_ids:
+                    row.set_selected(True)
                 row.pack(fill="x", padx=4, pady=2)
                 self.row_views[item.id] = row
 
@@ -830,6 +934,35 @@ class QueueTableView(ctk.CTkFrame):
             )
         else:
             self._lazy_job = None
+
+    def select_all(self) -> None:
+        """Select all items currently in table and pending in lazy queue."""
+        for item_id, row in self.row_views.items():
+            row.set_selected(True)
+            self.selected_ids.add(item_id)
+        for it in self._lazy_queue:
+            self.selected_ids.add(it.id)
+        self.on_select_item("", True)
+
+    def deselect_all(self) -> None:
+        """Deselect all items currently in table and pending in lazy queue."""
+        for item_id, row in self.row_views.items():
+            row.set_selected(False)
+        self.selected_ids.clear()
+        self.on_select_item("", False)
+
+    def toggle_select_all(self) -> bool:
+        """
+        Toggle selection for all items in queue.
+        Returns True if all selected, False if all deselected.
+        """
+        total = len(self.row_views) + len(self._lazy_queue)
+        if total > 0 and len(self.selected_ids) >= total:
+            self.deselect_all()
+            return False
+        else:
+            self.select_all()
+            return True
 
     def _handle_delete_row(self, item_id: str) -> None:
         self.remove_item(item_id)
@@ -978,6 +1111,11 @@ class GlobalProgressView(ctk.CTkFrame):
         self.lbl_speed.configure(text=f"⚡ {metrics.get('throughput_str', '0.0 songs/s')}")
         self.lbl_eta.configure(text=f"⏱ ETA: {metrics.get('eta_str', '--:--')}")
         self.lbl_elapsed.configure(text=f"⌛ {metrics.get('elapsed_str', '00:00')}")
+
+    def set_total_items(self, total: int) -> None:
+        """Update queued songs count before/after conversion."""
+        if self.progress_bar.get() == 0.0:
+            self.lbl_percent.configure(text=f"0% (0 / {total} songs)")
 
     def reset(self) -> None:
         """Reset progress view to zero."""

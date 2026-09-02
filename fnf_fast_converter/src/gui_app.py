@@ -93,7 +93,7 @@ class FastConverterApp(ctk.CTk):
 
         # 3. Layout Grid
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(3, weight=1)  # Queue Table is expandable
+        self.rowconfigure(4, weight=1)  # Queue Table is expandable
 
         # 4. Build View Components
         self._build_views()
@@ -104,7 +104,11 @@ class FastConverterApp(ctk.CTk):
         # 6. Window Close Interceptor
         self.protocol("WM_DELETE_WINDOW", self._on_close_window)
 
-        # 7. Start 60 FPS Event Polling Loop
+        # 7. Global Keyboard Shortcuts
+        self.bind("<Control-a>", lambda e: self._on_select_all())
+        self.bind("<Control-A>", lambda e: self._on_select_all())
+
+        # 8. Start 60 FPS Event Polling Loop
         self._anim_counter = 0
         self._poll_interval_ms = 20  # ~50-60 Hz UI update
         self.after(self._poll_interval_ms, self._poll_worker_events)
@@ -125,15 +129,16 @@ class FastConverterApp(ctk.CTk):
         )
         self.settings_toolbar.grid(row=1, column=0, sticky="ew", padx=16, pady=4)
 
-        # Row 1b: Expandable Advanced Settings (hidden initially)
+        # Row 2: Expandable Advanced Settings (hidden initially on its own row)
         self.advanced_card = AdvancedSettingsCard(
             self,
             config=self.config,
             on_config_changed=self._on_config_changed,
+            on_collapse=self._on_toggle_advanced,
         )
         self._advanced_visible = False
 
-        # Row 2: Queue Toolbar (Add / Remove / Clear / Start)
+        # Row 3: Queue Toolbar (Add / Select All / Remove / Clear / Start)
         self.queue_toolbar = QueueToolbarView(
             self,
             on_add_files=self._on_add_files,
@@ -143,25 +148,29 @@ class FastConverterApp(ctk.CTk):
             on_retry_failed=self._on_retry_failed,
             on_start_conversion=self._on_start_conversion,
             on_cancel_conversion=self._on_cancel_conversion,
+            on_select_all=self._on_select_all,
         )
-        self.queue_toolbar.grid(row=2, column=0, sticky="ew", padx=16, pady=6)
+        self.queue_toolbar.grid(row=3, column=0, sticky="ew", padx=16, pady=6)
 
-        # Row 3: Queue Table View
+        # Row 4: Queue Table View
         self.queue_table = QueueTableView(
             self,
             on_delete_item=self._on_delete_queue_item,
             on_select_item=self._on_select_queue_item,
             on_context_action=self._on_context_action,
         )
-        self.queue_table.grid(row=3, column=0, sticky="nsew", padx=16, pady=4)
+        self.queue_table.grid(row=4, column=0, sticky="nsew", padx=16, pady=4)
 
-        # Row 4: Global Progress & Live Metrics
+        # Row 5: Global Progress & Live Metrics
         self.progress_view = GlobalProgressView(self)
-        self.progress_view.grid(row=4, column=0, sticky="ew", padx=16, pady=6)
+        self.progress_view.grid(row=5, column=0, sticky="ew", padx=16, pady=6)
 
-        # Row 5: Collapsible Log Console Drawer
+        # Row 6: Collapsible Log Console Drawer
         self.log_console = LogConsoleView(self)
-        self.log_console.grid(row=5, column=0, sticky="ew", padx=16, pady=(4, 12))
+        self.log_console.grid(row=6, column=0, sticky="ew", padx=16, pady=(4, 12))
+
+        # Initial queue counts
+        self._update_queue_counts()
 
     def _setup_dnd(self) -> None:
         """Initialize native Windows drag-and-drop hook with safe fallback."""
@@ -184,6 +193,7 @@ class FastConverterApp(ctk.CTk):
             )
             if new_items:
                 self.queue_table.add_items_lazy(new_items)
+                self._update_queue_counts()
                 self.log_console.append_log(
                     f"Added {len(new_items)} songs to conversion queue from drag-and-drop.",
                     level="INFO",
@@ -207,7 +217,7 @@ class FastConverterApp(ctk.CTk):
         """Show or hide advanced settings card."""
         self._advanced_visible = not self._advanced_visible
         if self._advanced_visible:
-            self.advanced_card.grid(row=1, column=0, sticky="ew", padx=16, pady=(48, 4))
+            self.advanced_card.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 6))
             self.settings_toolbar.btn_advanced.configure(text="⚙ Advanced ▴")
         else:
             self.advanced_card.grid_forget()
@@ -216,6 +226,23 @@ class FastConverterApp(ctk.CTk):
     def _on_config_changed(self) -> None:
         """Save updated settings to disk."""
         self.config_manager.save(self.config)
+
+    def _on_select_all(self) -> None:
+        """Toggle select all items in queue."""
+        self.queue_table.toggle_select_all()
+        self._update_queue_counts()
+
+    def _on_deselect_all(self) -> None:
+        """Deselect all items in queue."""
+        self.queue_table.deselect_all()
+        self._update_queue_counts()
+
+    def _update_queue_counts(self) -> None:
+        """Update toolbar counter badge and progress view total count."""
+        total = self.queue_model.counts()["total"]
+        selected = len(self.queue_table.selected_ids)
+        self.queue_toolbar.update_counter(total_count=total, selected_count=selected)
+        self.progress_view.set_total_items(total)
 
     def _on_add_files(self) -> None:
         """Open multi-file picker for CON packages."""
@@ -231,6 +258,7 @@ class FastConverterApp(ctk.CTk):
             )
             if new_items:
                 self.queue_table.add_items_lazy(new_items)
+                self._update_queue_counts()
                 self.log_console.append_log(
                     f"Added {len(new_items)} file(s) to conversion queue.",
                     level="INFO",
@@ -252,6 +280,7 @@ class FastConverterApp(ctk.CTk):
                     discovered, metadata_peek_fn=peek_con_metadata
                 )
                 self.queue_table.add_items_lazy(new_items)
+                self._update_queue_counts()
                 self.log_console.append_log(
                     f"Discovered and queued {len(new_items)} CON package(s).",
                     level="INFO",
@@ -269,10 +298,11 @@ class FastConverterApp(ctk.CTk):
     def _on_delete_queue_item(self, item_id: str) -> None:
         """Remove item from queue model."""
         self.queue_model.remove_item(item_id)
+        self._update_queue_counts()
 
     def _on_select_queue_item(self, item_id: str, selected: bool) -> None:
         """Track selected item in queue table."""
-        pass
+        self._update_queue_counts()
 
     def _on_remove_selected(self) -> None:
         """Remove all checked rows."""
@@ -282,6 +312,7 @@ class FastConverterApp(ctk.CTk):
 
         self.queue_model.remove_selected(selected_ids)
         self.queue_table.remove_items(selected_ids)
+        self._update_queue_counts()
         self.log_console.append_log(
             f"Removed {len(selected_ids)} item(s) from queue.",
             level="INFO",
@@ -300,6 +331,7 @@ class FastConverterApp(ctk.CTk):
         self.queue_table.clear()
         self.stats_tracker.reset()
         self.progress_view.reset()
+        self._update_queue_counts()
         self.log_console.append_log("Queue cleared.", level="INFO")
 
     def _on_retry_failed(self) -> None:
@@ -308,6 +340,7 @@ class FastConverterApp(ctk.CTk):
         if retried:
             for item in retried:
                 self.queue_table.update_row_state(item.id, QueueItemState.PENDING)
+            self._update_queue_counts()
             self.log_console.append_log(
                 f"Reset {len(retried)} failed/skipped item(s) back to Pending.",
                 level="INFO",
@@ -335,6 +368,10 @@ class FastConverterApp(ctk.CTk):
                 f"Copied path to clipboard: {item.file_path}",
                 level="INFO",
             )
+        elif action == "select_all":
+            self._on_select_all()
+        elif action == "deselect_all":
+            self._on_deselect_all()
         elif action == "view_error":
             if item.state == QueueItemState.ERROR:
                 msg = item.error_message or "Unknown error."

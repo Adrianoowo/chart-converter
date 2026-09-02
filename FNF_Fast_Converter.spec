@@ -13,8 +13,8 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['C:/Users/adema/Documents/antigravity/brave-raman/run_gui.py'],
-    pathex=['C:/Users/adema/Documents/antigravity/brave-raman', 'C:/Users/adema/Documents/antigravity/brave-raman/fnf_fast_converter', 'C:/Users/adema/Documents/antigravity/brave-raman/fnf_fast_converter/src'],
+    ['C:/Users/adema/Documents/chart-converter/run_gui.py'],
+    pathex=['C:/Users/adema/Documents/chart-converter', 'C:/Users/adema/Documents/chart-converter/fnf_fast_converter', 'C:/Users/adema/Documents/chart-converter/fnf_fast_converter/src'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

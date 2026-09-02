@@ -1403,4 +1403,89 @@ class TestHeadlessCustomTkinterLifecycle:
         assert item is not None
         assert item.state == QueueItemState.SKIPPED
 
+    def test_headless_app_total_files_counter_updates(self, tmp_path):
+        """Verify total files counter badge updates dynamically on additions, selections, deletions."""
+        self.app._on_clear_all()
+        assert "Total: 0 files" in self.app.queue_toolbar.lbl_counter.cget("text")
+
+        f1 = tmp_path / "song1.con"
+        f2 = tmp_path / "song2.con"
+        f1.touch()
+        f2.touch()
+
+        added = self.app.queue_model.add_files([f1, f2])
+        self.app.queue_table.add_items_lazy(added)
+        self.app._update_queue_counts()
+        self.app.update()
+
+        assert "Total: 2 files" in self.app.queue_toolbar.lbl_counter.cget("text")
+        assert "0 / 2 songs" in self.app.progress_view.lbl_percent.cget("text")
+
+        # Select 1 item
+        self.app.queue_table.row_views[added[0].id].set_selected(True)
+        self.app.queue_table._handle_select_toggle(added[0].id, True)
+        self.app.update()
+
+        assert "Total: 2 files (1 selected)" in self.app.queue_toolbar.lbl_counter.cget("text")
+
+        # Clear all
+        self.app._on_clear_all()
+        self.app.update()
+        assert "Total: 0 files" in self.app.queue_toolbar.lbl_counter.cget("text")
+
+    def test_headless_app_select_all_toggle_and_shortcuts(self, tmp_path):
+        """Verify select all button, toggle behavior, and context menu actions."""
+        f1 = tmp_path / "s1.con"
+        f2 = tmp_path / "s2.con"
+        f1.touch()
+        f2.touch()
+
+        added = self.app.queue_model.add_files([f1, f2])
+        self.app.queue_table.add_items_lazy(added)
+        self.app._update_queue_counts()
+        self.app.update()
+
+        assert len(self.app.queue_table.selected_ids) == 0
+        assert self.app.queue_toolbar.btn_select_all.cget("text") == "☑ Select All"
+
+        # Trigger Select All
+        self.app._on_select_all()
+        self.app.update()
+
+        assert len(self.app.queue_table.selected_ids) == 2
+        assert self.app.queue_toolbar.btn_select_all.cget("text") == "☐ Deselect All"
+        assert "Total: 2 files (2 selected)" in self.app.queue_toolbar.lbl_counter.cget("text")
+
+        # Trigger Deselect All
+        self.app._on_select_all()
+        self.app.update()
+
+        assert len(self.app.queue_table.selected_ids) == 0
+        assert self.app.queue_toolbar.btn_select_all.cget("text") == "☑ Select All"
+
+        # Explicit deselect
+        self.app._on_select_all()
+        assert len(self.app.queue_table.selected_ids) == 2
+        self.app._on_deselect_all()
+        assert len(self.app.queue_table.selected_ids) == 0
+
+    def test_headless_app_advanced_settings_collapse_and_row_layout(self):
+        """Verify advanced settings card expands on dedicated row 2 and collapses cleanly."""
+        assert self.app._advanced_visible is False
+
+        # Open
+        self.app._on_toggle_advanced()
+        assert self.app._advanced_visible is True
+        info = self.app.advanced_card.grid_info()
+        assert info["row"] == 2
+        assert "▴" in self.app.settings_toolbar.btn_advanced.cget("text")
+
+        # Collapse via on_collapse callback on card itself
+        assert self.app.advanced_card.on_collapse is not None
+        self.app.advanced_card.on_collapse()
+        assert self.app._advanced_visible is False
+        assert "▾" in self.app.settings_toolbar.btn_advanced.cget("text")
+        assert not self.app.advanced_card.winfo_ismapped()
+
+
 
