@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fnf_fast_converter"
+version = "1.0.0"
+description = "High-Speed Native Rock Band CON to Clone Hero Converter"
+authors = [{ name = "Dansla116" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+    "soundfile>=0.12.0",
+    "pillow>=9.0.0",
+]
+
+[project.scripts]
+fnf_fast_converter = "fnf_fast_converter.src.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "fnf_fast_converter",
+]
+testpaths = ["fnf_fast_converter/tests"]
