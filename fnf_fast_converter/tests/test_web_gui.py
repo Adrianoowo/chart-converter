@@ -123,6 +123,10 @@ class TestWebServerEndpoints(unittest.TestCase):
             data = json.loads(resp.read().decode("utf-8"))
             self.assertIn("config", data)
             self.assertIn("queue", data)
+            self.assertIn("is_converting", data)
+            self.assertIn("progress", data)
+            self.assertIn("elapsed", data["progress"])
+            self.assertIn("eta", data["progress"])
             self.assertIsInstance(data["queue"], list)
 
     def test_api_config_update(self):

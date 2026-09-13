@@ -627,6 +627,13 @@
           queueItems = data.queue;
           renderQueue();
         }
+        if (data.progress) {
+          updateProgressDisplay(data.progress);
+        }
+        if (data.is_converting) {
+          updateConversionUI(true);
+          startPollingStatus();
+        }
       } catch (err) {
         log("Failed to initialize: " + err, "error");
       }
@@ -1000,6 +1007,23 @@
     }
 
     // Status Polling
+    function updateProgressDisplay(p) {
+      if (!p) return;
+      const percent = typeof p.percent === "number" ? p.percent : 0;
+      progressBarFill.style.width = `${percent}%`;
+      progressPercent.textContent = `${percent.toFixed(1)}% (${p.processed || 0} / ${p.total || 0} songs)`;
+      
+      const eta = p.eta_str || p.eta || "--:--";
+      progressEta.textContent = `⏱ ETA: ${eta}`;
+      
+      const speed = p.throughput_str || p.speed || (typeof p.throughput === "number" ? `${p.throughput.toFixed(2)} songs/s` : "0.0 songs/s");
+      progressThroughput.textContent = `⚡ Speed: ${speed}`;
+      
+      const elapsed = p.elapsed_str || p.elapsed || "00:00";
+      progressElapsed.textContent = `⌛ Elapsed: ${elapsed}`;
+    }
+
+    // Status Polling
     function startPollingStatus() {
       if (pollInterval) clearInterval(pollInterval);
       pollInterval = setInterval(async () => {
@@ -1013,11 +1037,7 @@
           }
 
           if (data.progress) {
-            progressBarFill.style.width = `${data.progress.percent}%`;
-            progressPercent.textContent = `${data.progress.percent.toFixed(1)}% (${data.progress.processed} / ${data.progress.total} songs)`;
-            progressEta.textContent = `⏱ ETA: ${data.progress.eta || "--:--"}`;
-            progressThroughput.textContent = `⚡ Speed: ${(data.progress.throughput || 0).toFixed(1)} songs/s`;
-            progressElapsed.textContent = `⌛ Elapsed: ${data.progress.elapsed || "00:00"}`;
+            updateProgressDisplay(data.progress);
           }
 
           if (data.logs && data.logs.length > 0) {
@@ -1031,6 +1051,10 @@
             updateConversionUI(false);
             clearInterval(pollInterval);
             pollInterval = null;
+            if (data.progress) {
+              updateProgressDisplay(data.progress);
+              progressEta.textContent = "⏱ ETA: Done";
+            }
             log("Conversion finished.", "info");
           }
         } catch (err) {}

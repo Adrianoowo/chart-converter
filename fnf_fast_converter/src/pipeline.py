@@ -375,7 +375,7 @@ def convert_con_to_song_folder(
                     def _write_stem_worker(item: Tuple[str, np.ndarray]) -> str:
                         name, stem_arr = item
                         dest_file = staging_dir / name
-                        chunk_sz = 65536
+                        chunk_sz = 131072
                         ch_cnt = 1 if stem_arr.ndim == 1 else stem_arr.shape[1]
                         tot_frames = stem_arr.shape[0]
                         with sf.SoundFile(

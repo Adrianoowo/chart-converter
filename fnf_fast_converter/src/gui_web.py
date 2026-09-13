@@ -215,7 +215,7 @@ class WebAppController:
 
                 elif event.event_type == WorkerEventType.ITEM_COMPLETED:
                     if event.item_id:
-                        elapsed = float(event.data.get("elapsed", 0.0))
+                        elapsed = float(event.data.get("elapsed_time") or event.data.get("elapsed") or 0.0)
                         out_dir = str(event.data.get("output_dir", ""))
                         self.queue_model.set_item_state(
                             event.item_id,
@@ -224,24 +224,33 @@ class WebAppController:
                             output_folder=out_dir,
                         )
                         self.stats_tracker.record_item_finished(event.item_id, QueueItemState.DONE, elapsed)
-                        song_title = event.data.get("title") or event.item_id
+                        item = self.queue_model.get_item(event.item_id)
+                        song_title = event.data.get("title") or (item.display_title if item else event.item_id)
                         self.add_log(f"✔ Converted: {song_title} ({elapsed:.1f}s)", "info")
 
                 elif event.event_type == WorkerEventType.ITEM_SKIPPED:
                     if event.item_id:
-                        self.queue_model.set_item_state(event.item_id, QueueItemState.SKIPPED)
-                        self.stats_tracker.record_item_finished(event.item_id, QueueItemState.SKIPPED, 0.0)
-                        song_title = event.data.get("title") or event.item_id
+                        elapsed = float(event.data.get("elapsed_time") or event.data.get("elapsed") or 0.0)
+                        self.queue_model.set_item_state(
+                            event.item_id,
+                            QueueItemState.SKIPPED,
+                            elapsed_time_sec=elapsed,
+                        )
+                        self.stats_tracker.record_item_finished(event.item_id, QueueItemState.SKIPPED, elapsed)
+                        item = self.queue_model.get_item(event.item_id)
+                        song_title = event.data.get("title") or (item.display_title if item else event.item_id)
                         self.add_log(f"⚡ Skipped (already exists): {song_title}", "warning")
 
                 elif event.event_type == WorkerEventType.ITEM_ERROR:
                     if event.item_id:
+                        elapsed = float(event.data.get("elapsed_time") or event.data.get("elapsed") or 0.0)
                         err = str(event.data.get("error", "Unknown error"))
                         self.queue_model.set_item_state(
-                            event.item_id, QueueItemState.ERROR, error_message=err
+                            event.item_id, QueueItemState.ERROR, error_message=err, elapsed_time_sec=elapsed
                         )
-                        self.stats_tracker.record_item_finished(event.item_id, QueueItemState.ERROR, 0.0)
-                        song_title = event.data.get("title") or event.item_id
+                        self.stats_tracker.record_item_finished(event.item_id, QueueItemState.ERROR, elapsed)
+                        item = self.queue_model.get_item(event.item_id)
+                        song_title = event.data.get("title") or (item.display_title if item else event.item_id)
                         self.add_log(f"✖ Error converting {song_title}: {err}", "error")
 
                 elif event.event_type == WorkerEventType.BATCH_FINISHED:
@@ -303,16 +312,25 @@ def create_web_handler(controller: WebAppController):
                 return
 
             if path == "/api/init":
+                metrics = controller.stats_tracker.get_metrics()
+                metrics["elapsed"] = metrics["elapsed_str"]
+                metrics["eta"] = metrics["eta_str"]
+                metrics["speed"] = metrics["throughput_str"]
                 self._send_json(
                     {
                         "config": controller.config.to_dict(),
                         "queue": controller.get_queue_items_dict(),
+                        "is_converting": controller.worker_pool.is_running(),
+                        "progress": metrics,
                     }
                 )
                 return
 
             if path == "/api/status":
                 metrics = controller.stats_tracker.get_metrics()
+                metrics["elapsed"] = metrics["elapsed_str"]
+                metrics["eta"] = metrics["eta_str"]
+                metrics["speed"] = metrics["throughput_str"]
                 self._send_json(
                     {
                         "is_converting": controller.worker_pool.is_running(),

@@ -2,7 +2,7 @@
 fnf_fast_converter - High-Speed Native Rock Band CON to Clone Hero Converter
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 try:
     from .stfs import STFSPackage, STFSError, STFSEntry, STFSHeader

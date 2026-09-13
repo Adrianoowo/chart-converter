@@ -40,7 +40,7 @@ except (ImportError, ValueError):
         sanitize_folder_name,
     )
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 # Reference baseline for speed comparisons (Onyx CLI average per song: 15.323s)
 ONYX_BASELINE_SECONDS = 15.323
