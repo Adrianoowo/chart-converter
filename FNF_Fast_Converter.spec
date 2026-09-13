@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('C:/Users/adema/Documents/chart-converter/fnf_fast_converter/src/web', 'fnf_fast_converter/src/web'), ('C:/Users/adema/Documents/chart-converter/fnf_fast_converter/src/web', 'web')]
 binaries = []
-hiddenimports = ['windnd', 'customtkinter', 'soundfile', 'PIL', 'PIL.Image', 'PIL.PngImagePlugin', 'numpy', 'fnf_fast_converter', 'fnf_fast_converter.src', 'fnf_fast_converter.src.gui', 'fnf_fast_converter.src.gui_app', 'fnf_fast_converter.src.gui_views', 'fnf_fast_converter.src.gui_worker', 'fnf_fast_converter.src.gui_stats', 'fnf_fast_converter.src.gui_dnd', 'fnf_fast_converter.src.gui_scanner', 'fnf_fast_converter.src.gui_queue', 'fnf_fast_converter.src.gui_config', 'fnf_fast_converter.src.pipeline', 'fnf_fast_converter.src.stfs', 'fnf_fast_converter.src.mogg', 'fnf_fast_converter.src.dta', 'fnf_fast_converter.src.image', 'fnf_fast_converter.src.ini', 'fnf_fast_converter.src.cli']
+hiddenimports = ['windnd', 'customtkinter', 'soundfile', 'PIL', 'PIL.Image', 'PIL.PngImagePlugin', 'numpy', 'fnf_fast_converter', 'fnf_fast_converter.src', 'fnf_fast_converter.src.gui', 'fnf_fast_converter.src.gui_app', 'fnf_fast_converter.src.gui_views', 'fnf_fast_converter.src.gui_worker', 'fnf_fast_converter.src.gui_stats', 'fnf_fast_converter.src.gui_dnd', 'fnf_fast_converter.src.gui_scanner', 'fnf_fast_converter.src.gui_queue', 'fnf_fast_converter.src.gui_config', 'fnf_fast_converter.src.pipeline', 'fnf_fast_converter.src.stfs', 'fnf_fast_converter.src.mogg', 'fnf_fast_converter.src.dta', 'fnf_fast_converter.src.image', 'fnf_fast_converter.src.ini', 'fnf_fast_converter.src.cli', 'fnf_fast_converter.src.gui_web', 'fnf_fast_converter.src.repair']
 tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('soundfile')

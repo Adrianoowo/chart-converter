@@ -144,6 +144,8 @@ def build_pyinstaller_command(paths, windowed=True):
         "fnf_fast_converter.src.image",
         "fnf_fast_converter.src.ini",
         "fnf_fast_converter.src.cli",
+        "fnf_fast_converter.src.gui_web",
+        "fnf_fast_converter.src.repair",
     ]
     
     cmd = [
@@ -165,6 +167,11 @@ def build_pyinstaller_command(paths, windowed=True):
         "--collect-all", "soundfile",
         "--collect-all", "PIL",
     ]
+
+    web_src = paths["src_dir"] / "web"
+    if web_src.is_dir():
+        cmd.extend(["--add-data", f"{web_src}{os.pathsep}fnf_fast_converter/src/web"])
+        cmd.extend(["--add-data", f"{web_src}{os.pathsep}web"])
     
     for h in hidden_imports:
         cmd.extend(["--hidden-import", h])
@@ -223,8 +230,31 @@ def copy_distribution_assets(paths):
         shutil.copy2(readme_src, out_dir / "README.md")
         shutil.copy2(readme_src, out_dir / "README.txt")
         print(f"  [+] Copied README to {out_dir / 'README.txt'}")
-        
-    # Create convenience launcher inside standalone folder
+
+    # Copy Web UI assets to ensure presence
+    web_src = paths["src_dir"] / "web"
+    if web_src.is_dir():
+        for target_sub in [
+            out_dir / "web",
+            out_dir / "_internal" / "web",
+            out_dir / "_internal" / "fnf_fast_converter" / "src" / "web",
+        ]:
+            try:
+                target_sub.parent.mkdir(parents=True, exist_ok=True)
+                if target_sub.exists():
+                    shutil.rmtree(target_sub)
+                shutil.copytree(web_src, target_sub)
+            except Exception:
+                pass
+        print(f"  [+] Bundled Web UI assets into standalone distribution")
+
+    # Copy repair_library.py if present
+    repair_src = paths["repo_root"] / "repair_library.py"
+    if repair_src.is_file():
+        shutil.copy2(repair_src, out_dir / "repair_library.py")
+        print(f"  [+] Copied repair tool: {repair_src.name}")
+
+    # Create convenience launchers inside standalone folder
     launcher_content = (
         "@echo off\r\n"
         "title FNF Fast Converter\r\n"
@@ -235,6 +265,21 @@ def copy_distribution_assets(paths):
     launcher_path = out_dir / "Run_Converter.bat"
     launcher_path.write_text(launcher_content, encoding="utf-8")
     print(f"  [+] Generated standalone launcher: {launcher_path.name}")
+
+    repair_launcher = (
+        "@echo off\r\n"
+        "title FNF Fast Converter - Library Repair\r\n"
+        "cd /d \"%~dp0\"\r\n"
+        "start \"\" \"%~dp0FNF_Fast_Converter.exe\" %*\r\n"
+        "exit /b 0\r\n"
+    )
+    (out_dir / "Run_Repair.bat").write_text(repair_launcher, encoding="utf-8")
+    print(f"  [+] Generated standalone repair launcher: Run_Repair.bat")
+
+    # Generate release ZIP archive
+    zip_base = paths["dist_root"] / "FNF_Fast_Converter-v1.1.2-windows-x64"
+    zip_path = shutil.make_archive(str(zip_base), "zip", root_dir=str(paths["dist_root"]), base_dir="FNF_Fast_Converter")
+    print(f"  [+] Created distribution ZIP: {Path(zip_path).name} ({os.path.getsize(zip_path) / (1024*1024):.2f} MB)")
     print("  [OK] Bundle assembly complete.\n")
 
 

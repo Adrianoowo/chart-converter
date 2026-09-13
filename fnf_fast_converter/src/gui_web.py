@@ -32,7 +32,22 @@ from .repair import repair_chart_library
 
 logger = logging.getLogger("fnf_fast_converter.web")
 
-WEB_DIR = Path(__file__).resolve().parent / "web"
+def _get_web_dir() -> Path:
+    candidates = [
+        Path(__file__).resolve().parent / "web",
+        Path(getattr(sys, "_MEIPASS", "")) / "fnf_fast_converter" / "src" / "web",
+        Path(getattr(sys, "_MEIPASS", "")) / "web",
+        Path(sys.executable).parent / "web",
+        Path(sys.executable).parent / "_internal" / "web",
+        Path(sys.executable).parent / "_internal" / "fnf_fast_converter" / "src" / "web",
+    ]
+    for c in candidates:
+        if (c / "index.html").is_file():
+            return c
+    return candidates[0]
+
+
+WEB_DIR = _get_web_dir()
 
 
 def _find_free_port(start_port: int = 8765) -> int:
