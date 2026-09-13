@@ -33,10 +33,19 @@ def main():
     if not os.path.exists(default_dir):
         default_dir = str(PROJECT_ROOT)
 
+    default_source = r"C:\Users\adema\Downloads\FNFestivaltoRB-main"
+    if not os.path.exists(default_source):
+        default_source = None
+
     parser.add_argument(
         "-d", "--dir",
         default=default_dir,
         help=f"Path to chart library folder (default: {default_dir})",
+    )
+    parser.add_argument(
+        "-s", "--source-dir",
+        default=default_source,
+        help=f"Optional path to source CON packages to restore broken DXT5 covers (default: {default_source})",
     )
     parser.add_argument(
         "--icon",
@@ -70,6 +79,7 @@ def main():
     print("  CHART LIBRARY REPAIR & MAINTENANCE UTILITY")
     print("=" * 65)
     print(f"Target Directory:    {target_path}")
+    print(f"Source CON Directory: {args.source_dir or '(None)'}")
     print(f"Repair Album Art:    {not args.no_art}")
     print(f"Repair song.ini:     {not args.no_icons} (icon = {args.icon})")
     print(f"Dry Run Mode:        {args.dry_run}")
@@ -80,14 +90,16 @@ def main():
             pct = (current / total) * 100 if total else 100
             print(
                 f"\r[{pct:5.1f}%] ({current}/{total}) "
-                f"Art fixed: {current_stats['images_repaired']} | "
-                f"INIs updated: {current_stats['inis_updated']} - {name[:30]:30s}",
+                f"Art restored: {current_stats['images_restored_from_con']} | "
+                f"Art cleaned: {current_stats['images_repaired']} | "
+                f"INIs: {current_stats['inis_updated']} - {name[:24]:24s}",
                 end="",
                 flush=True,
             )
 
     stats = repair_chart_library(
         target_path,
+        source_dir=args.source_dir,
         fix_art=not args.no_art,
         fix_icons=not args.no_icons,
         icon_tag=args.icon,
@@ -103,6 +115,7 @@ def main():
     print(f"  • song.ini Updated:         {stats['inis_updated']} (now with icon = {args.icon})")
     print(f"  • Album Images Checked:     {stats['images_checked']}")
     print(f"  • Album Images Repaired:    {stats['images_repaired']}")
+    print(f"  • Restored from CONs:       {stats['images_restored_from_con']}")
     print(f"  • Noise Pixels Eliminated:  {stats['pixels_fixed']}")
     print(f"  • Elapsed Time:             {stats['elapsed_seconds']:.2f} s")
 

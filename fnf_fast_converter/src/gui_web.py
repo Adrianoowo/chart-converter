@@ -432,21 +432,25 @@ def create_web_handler(controller: WebAppController):
 
             if path == "/api/library/repair":
                 target = payload.get("target_dir") or controller.config.output_dir or r"D:\Charts\Fortnite Festival"
+                default_con = r"C:\Users\adema\Downloads\FNFestivaltoRB-main"
+                source = payload.get("source_dir") or (default_con if os.path.isdir(default_con) else None)
                 fix_art = payload.get("fix_art", True)
                 fix_icons = payload.get("fix_icons", True)
                 icon_tag = payload.get("icon", "fnf")
 
-                controller.add_log(f"Starting library repair on '{target}' (fix_art={fix_art}, fix_icons={fix_icons})...")
+                controller.add_log(f"Starting library repair on '{target}' (source_dir='{source}', fix_art={fix_art}, fix_icons={fix_icons})...")
                 try:
                     stats = repair_chart_library(
                         target,
+                        source_dir=source,
                         fix_art=fix_art,
                         fix_icons=fix_icons,
                         icon_tag=icon_tag,
                     )
                     msg = (
                         f"Library repair complete: {stats['total_songs']} songs scanned, "
-                        f"{stats['images_repaired']} images cleaned ({stats['pixels_fixed']} noise dots removed), "
+                        f"{stats['images_restored_from_con']} covers restored from CONs, "
+                        f"{stats['images_repaired']} images repaired, "
                         f"{stats['inis_updated']} song.ini updated with icon={icon_tag}."
                     )
                     controller.add_log(msg)

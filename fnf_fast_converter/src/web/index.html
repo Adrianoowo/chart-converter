@@ -466,10 +466,15 @@
           <input type="text" id="repairTargetDir" placeholder="D:\Charts\Fortnite Festival">
           <button class="btn btn-primary" id="btnBrowseRepairDir">Browse...</button>
         </div>
+        <label for="repairSourceDir" style="margin-top:6px;">Source CONs (Optional):</label>
+        <div class="path-input-group" style="width:100%; margin-top:6px;">
+          <input type="text" id="repairSourceDir" placeholder="C:\Users\adema\Downloads\FNFestivaltoRB-main">
+          <button class="btn btn-primary" id="btnBrowseRepairSource">Browse...</button>
+        </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; font-size:13px;">
         <label class="checkbox-label">
-          <input type="checkbox" id="chkFixArt" checked> Fix Album Art (eliminate white dot noise artifacts)
+          <input type="checkbox" id="chkFixArt" checked> Restore & Fix Album Art (re-extracts authentic DXT5 covers from CONs & removes noise)
         </label>
         <label class="checkbox-label">
           <input type="checkbox" id="chkFixIcons" checked> Ensure song.ini has <code>icon = fnf</code> (clears YARG Unknown Sources)
@@ -1068,11 +1073,14 @@
     const btnCancelRepair = document.getElementById("btnCancelRepair");
     const btnRunRepair = document.getElementById("btnRunRepair");
     const repairTargetDir = document.getElementById("repairTargetDir");
+    const repairSourceDir = document.getElementById("repairSourceDir");
     const btnBrowseRepairDir = document.getElementById("btnBrowseRepairDir");
+    const btnBrowseRepairSource = document.getElementById("btnBrowseRepairSource");
     const repairResults = document.getElementById("repairResults");
 
     btnOpenRepairModal.addEventListener("click", () => {
       repairTargetDir.value = outputDirInput.value || "D:\\Charts\\Fortnite Festival";
+      repairSourceDir.value = inputDirInput.value || "C:\\Users\\adema\\Downloads\\FNFestivaltoRB-main";
       repairResults.style.display = "none";
       repairResults.innerHTML = "";
       repairModal.style.display = "flex";
@@ -1098,8 +1106,22 @@
       } catch (err) {}
     });
 
+    btnBrowseRepairSource.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/browse/folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (data.folder) {
+          repairSourceDir.value = data.folder;
+        }
+      } catch (err) {}
+    });
+
     btnRunRepair.addEventListener("click", async () => {
       const target = repairTargetDir.value.trim();
+      const source = repairSourceDir.value.trim();
       if (!target) {
         alert("Please select or enter a chart directory to repair.");
         return;
@@ -1107,7 +1129,7 @@
       btnRunRepair.disabled = true;
       btnRunRepair.textContent = "⏳ Repairing Library...";
       repairResults.style.display = "block";
-      repairResults.innerHTML = `<span style="color:#93c5fd;">Scanning and repairing '${target}'...</span>`;
+      repairResults.innerHTML = `<span style="color:#93c5fd;">Scanning charts and restoring authentic covers...</span>`;
 
       try {
         const res = await fetch("/api/library/repair", {
@@ -1115,6 +1137,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             target_dir: target,
+            source_dir: source || undefined,
             fix_art: document.getElementById("chkFixArt").checked,
             fix_icons: document.getElementById("chkFixIcons").checked,
             icon: "fnf"
@@ -1127,7 +1150,8 @@
             <div style="color:#4ade80; font-weight:600; margin-bottom:6px;">✓ Repair Completed in ${s.elapsed_seconds.toFixed(2)}s</div>
             <div>• Songs scanned: <b>${s.total_songs}</b></div>
             <div>• song.ini updated with icon=fnf: <b>${s.inis_updated}</b></div>
-            <div>• Album images repaired: <b>${s.images_repaired}</b> (removed <b>${s.pixels_fixed}</b> white noise dots)</div>
+            <div>• Covers restored from source CONs: <b>${s.images_restored_from_con || 0}</b></div>
+            <div>• Album images cleaned / verified: <b>${s.images_repaired}</b> (removed <b>${s.pixels_fixed}</b> white noise dots)</div>
           `;
           if (s.duplicates && s.duplicates.length > 0) {
             html += `<div style="color:#fbbf24; margin-top:6px;"><b>⚠ Duplicates detected:</b></div>`;

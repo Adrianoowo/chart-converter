@@ -241,3 +241,123 @@ class TestImageDecoder:
         assert repaired2 is False
         assert count2 == 0
 
+    def test_decode_synthetic_dxt5(self):
+        # Green and Blue block
+        green = (0, 255, 0)
+        blue = (0, 0, 255)
+        idx_grid = [
+            [0, 1, 2, 3],
+            [3, 2, 1, 0],
+            [0, 1, 2, 3],
+            [3, 2, 1, 0],
+        ]
+        raw_dxt5 = create_synthetic_dxt5_xbox(green, blue, idx_grid, 64, 64)
+        png_bytes = decode_png_xbox(raw_dxt5, 64, 64)
+
+        assert png_bytes.startswith(PNG_SIGNATURE)
+        img = Image.open(io.BytesIO(png_bytes))
+        assert img.size == (64, 64)
+        assert img.mode == "RGB"
+
+        arr = np.array(img)
+        # Pixel (0, 0) is slot 0 -> Green
+        assert arr[0, 0, 1] >= 240
+        assert arr[0, 0, 2] <= 15
+        # Pixel (0, 1) is slot 1 -> Blue
+        assert arr[0, 1, 2] >= 240
+        assert arr[0, 1, 1] <= 15
+
+    def test_dxt5_python_fallback_matches_numpy(self):
+        color0 = (220, 140, 80)
+        color1 = (30, 70, 190)
+        idx_grid = [
+            [0, 2, 1, 3],
+            [1, 3, 0, 2],
+            [2, 0, 3, 1],
+            [3, 1, 2, 0],
+        ]
+        raw_dxt5 = create_synthetic_dxt5_xbox(color0, color1, idx_grid, 32, 32)
+        payload = bytearray(raw_dxt5[32 : 32 + (32 * 32)])
+        payload[0::2], payload[1::2] = payload[1::2], payload[0::2]
+
+        from fnf_fast_converter.src.image import decode_dxt5_numpy, decode_dxt5_python
+        res_numpy = decode_dxt5_numpy(payload, 32, 32)
+        res_python = decode_dxt5_python(payload, 32, 32)
+
+        assert res_numpy == res_python
+
+    def test_is_corrupted_album_art_detection(self):
+        from fnf_fast_converter.src.image import is_corrupted_album_art
+        # 1. Clean uniform image
+        clean_img = Image.new("RGB", (64, 64), (120, 150, 180))
+        buf = io.BytesIO()
+        clean_img.save(buf, format="PNG")
+        assert is_corrupted_album_art(buf.getvalue()) is False
+
+        # 2. Naturally white image (like Big Poppa - Ready to Die)
+        white_img = Image.new("RGB", (64, 64), (255, 255, 255))
+        buf_w = io.BytesIO()
+        white_img.save(buf_w, format="PNG")
+        assert is_corrupted_album_art(buf_w.getvalue()) is False
+
+        # 3. Corrupted image with alternating white checkerboard blocks
+        arr = np.zeros((64, 64, 3), dtype=np.uint8)
+        # Set every alternating 4x4 block to pure white
+        for by in range(16):
+            for bx in range(16):
+                if (bx + by) % 2 == 0:
+                    arr[by*4:(by+1)*4, bx*4:(bx+1)*4] = 255
+        corrupted_img = Image.fromarray(arr)
+        buf_c = io.BytesIO()
+        corrupted_img.save(buf_c, format="PNG")
+        assert is_corrupted_album_art(buf_c.getvalue()) is True
+
+
+def create_synthetic_dxt5_xbox(
+    c0_rgb: tuple[int, int, int],
+    c1_rgb: tuple[int, int, int],
+    indices_4x4: list[list[int]],
+    width: int = 64,
+    height: int = 64,
+) -> bytes:
+    """Helper to synthesize a valid 32-byte header + DXT5 Xbox 360 payload."""
+    r0 = (c0_rgb[0] * 31 // 255) & 0x1F
+    g0 = (c0_rgb[1] * 63 // 255) & 0x3F
+    b0 = (c0_rgb[2] * 31 // 255) & 0x1F
+    c0_565 = (r0 << 11) | (g0 << 5) | b0
+
+    r1 = (c1_rgb[0] * 31 // 255) & 0x1F
+    g1 = (c1_rgb[1] * 63 // 255) & 0x3F
+    b1 = (c1_rgb[2] * 31 // 255) & 0x1F
+    c1_565 = (r1 << 11) | (g1 << 5) | b1
+
+    lookup = 0
+    for py in range(4):
+        for px in range(4):
+            idx = indices_4x4[py][px] & 0x3
+            shift = (py * 4 + px) * 2
+            lookup |= (idx << shift)
+
+    # 16-byte block: 8 bytes alpha (0xFF opaque) + 8 bytes color
+    alpha_block = b"\xff\xff\x00\x00\x00\x00\x00\x00"
+    color_block = struct.pack("<HHI", c0_565, c1_565, lookup)
+    block_le = alpha_block + color_block
+
+    # Big-endian byte swap for Xbox 360
+    block_be = bytearray(block_le)
+    block_be[0::2], block_be[1::2] = block_be[1::2], block_be[0::2]
+
+    num_blocks = (width * height) // 16
+    payload = bytes(block_be) * num_blocks
+
+    # 32-byte header (version=1, bpp=24, enc=5, width, height)
+    header = bytearray(32)
+    header[0] = 1
+    header[1] = 8
+    header[2] = 24  # DXT5 bpp
+    header[6] = 5   # DXT5 enc
+    struct.pack_into(">HH", header, 8, width, height)
+
+    return bytes(header) + payload
+
+
