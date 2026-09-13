@@ -70,7 +70,7 @@ class TestCLIExecution:
             main(["--version"])
         assert excinfo.value.code == 0
         captured = capsys.readouterr()
-        assert "1.0.0" in captured.out
+        assert "1.1.0" in captured.out
 
     def test_cli_nonexistent_input_returns_code_1(self, capsys):
         """Verify non-existent input path returns exit code 1."""

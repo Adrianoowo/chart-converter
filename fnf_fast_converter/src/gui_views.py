@@ -74,19 +74,7 @@ class HeaderView(ctk.CTkFrame):
             font=ctk.CTkFont(size=18, weight="bold"),
             text_color=COLOR_TEXT_MAIN,
         )
-        main_title.pack(side="left", padx=(0, 10))
-
-        badge = ctk.CTkLabel(
-            title_frame,
-            text="ROCK BAND CON ➔ CLONE HERO",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color=COLOR_ACCENT,
-            text_color="#ffffff",
-            corner_radius=4,
-            padx=8,
-            pady=2,
-        )
-        badge.pack(side="left")
+        main_title.pack(side="left")
 
         # Subtitle
         subtitle = ctk.CTkLabel(

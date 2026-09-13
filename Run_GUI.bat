@@ -13,14 +13,22 @@ echo.
 :: 1. Search for Python >= 3.9
 set "PYTHON_EXE="
 
-:: Check 'python' in PATH
-where python >nul 2>&1
+:: Check for py -3.12 with preinstalled audio dependencies
+py -3.12 -c "import soundfile, numpy" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    for /f "delims=" %%I in ('where python 2^>nul') do (
-        if not defined PYTHON_EXE (
-            "%%I" -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
-            if !ERRORLEVEL! EQU 0 (
-                set "PYTHON_EXE=%%I"
+    set "PYTHON_EXE=py -3.12"
+)
+
+:: Check 'python' in PATH
+if not defined PYTHON_EXE (
+    where python >nul 2>&1
+    if !ERRORLEVEL! EQU 0 (
+        for /f "delims=" %%I in ('where python 2^>nul') do (
+            if not defined PYTHON_EXE (
+                "%%I" -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
+                if !ERRORLEVEL! EQU 0 (
+                    set "PYTHON_EXE=%%I"
+                )
             )
         )
     )
@@ -103,8 +111,9 @@ if exist "%SCRIPT_DIR%fnf_fast_converter" (
 )
 
 :: 3. Check and install dependencies
+:: Core: soundfile, numpy, PIL. Desktop GUI: customtkinter, windnd.
 echo [INFO] Checking required dependencies...
-%PYTHON_EXE% -c "import customtkinter, windnd, soundfile, numpy, PIL" >nul 2>&1
+%PYTHON_EXE% -c "import soundfile, numpy, PIL" >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [INFO] Missing dependencies detected. Installing required packages...
     if exist "%SCRIPT_DIR%requirements.txt" (
@@ -112,16 +121,16 @@ if %ERRORLEVEL% NEQ 0 (
     ) else if exist "%SCRIPT_DIR%..\requirements.txt" (
         %PYTHON_EXE% -m pip install -r "%SCRIPT_DIR%..\requirements.txt"
     ) else (
-        %PYTHON_EXE% -m pip install customtkinter windnd soundfile numpy pillow
+        %PYTHON_EXE% -m pip install soundfile numpy pillow customtkinter windnd
     )
     
     :: Verify dependencies were installed
-    %PYTHON_EXE% -c "import customtkinter, windnd, soundfile, numpy, PIL" >nul 2>&1
+    %PYTHON_EXE% -c "import soundfile, numpy, PIL" >nul 2>&1
     if !ERRORLEVEL! NEQ 0 (
         echo.
         echo [ERROR] Failed to install required dependencies.
         echo Please check your internet connection or install manually with:
-        echo   %PYTHON_EXE% -m pip install -r requirements.txt
+        echo   %PYTHON_EXE% -m pip install soundfile numpy pillow
         echo.
         pause
         exit /b 1
@@ -129,7 +138,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo [OK] Dependencies installed successfully.
     echo.
 ) else (
-    echo [OK] All dependencies are installed.
+    echo [OK] All core dependencies are installed.
     echo.
 )
 

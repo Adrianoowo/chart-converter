@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FNF Fast Converter — Rock Band CON to Clone Hero</title>
+  <style>
+    :root {
+      --bg: #121214;
+      --card-bg: #1a1a1e;
+      --card-border: #27272a;
+      --card-hover: #222227;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --warning: #d97706;
+      --info: #0284c7;
+      --pending: #3f3f46;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title-group h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+    }
+
+    .title-group p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .settings-grid {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .settings-grid label {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .path-input-group {
+      display: flex;
+      flex: 1;
+      gap: 8px;
+      min-width: 320px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #0d0d0f;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #27272a;
+      color: var(--text-main);
+      transition: background 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #3f3f46;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #ffffff;
+      padding: 8px 20px;
+      font-size: 14px;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: var(--success-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #ffffff;
+      padding: 8px 20px;
+      font-size: 14px;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-hover);
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .counter-badge {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 8px;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      transition: all 0.2s ease;
+      background: rgba(255, 255, 255, 0.01);
+      cursor: pointer;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.06);
+      color: var(--text-main);
+    }
+
+    .drop-zone p {
+      font-size: 14px;
+    }
+
+    .drop-zone span {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* Queue Table */
+    .table-container {
+      max-height: 420px;
+      overflow-y: auto;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      margin-bottom: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: #151518;
+      z-index: 1;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    th {
+      padding: 10px 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: var(--card-hover);
+    }
+
+    .song-title-cell {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .song-subtitle-cell {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-pending { background: var(--pending); color: #fff; }
+    .badge-converting { background: var(--info); color: #fff; animation: pulse 1.5s infinite; }
+    .badge-done { background: var(--success); color: #fff; }
+    .badge-skipped { background: var(--warning); color: #fff; }
+    .badge-error { background: var(--danger); color: #fff; }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.65; }
+      100% { opacity: 1; }
+    }
+
+    /* Progress Section */
+    .progress-section {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: #27272a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Log Console */
+    .log-card {
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      background: #0d0d0f;
+      padding: 12px 16px;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .log-console {
+      height: 140px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #d4d4d8;
+      line-height: 1.6;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line.error { color: #f87171; }
+    .log-line.warning { color: #fbbf24; }
+    .log-line.info { color: #93c5fd; }
+
+    /* Advanced details */
+    details {
+      margin-bottom: 14px;
+    }
+
+    details summary {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      user-select: none;
+      padding: 6px 0;
+    }
+
+    details summary:hover {
+      color: var(--text-main);
+    }
+
+    .advanced-content {
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .advanced-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .advanced-field label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .advanced-field input {
+      width: 140px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>FNF Fast Converter</h1>
+      <p>Rock Band CON to Clone Hero Converter</p>
+    </div>
+    <div>
+      <button class="btn" id="btnOpenRepairModal" style="border: 1px solid var(--card-border); background: #1c1c20; font-size: 12px; padding: 7px 14px;">🛠️ Fix Library (Art & Icons)</button>
+    </div>
+  </header>
+
+  <!-- Library Repair Modal -->
+  <div id="repairModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:999; align-items:center; justify-content:center;">
+    <div class="card" style="width:540px; max-width:92%; background:#16161a; border:1px solid #3f3f46; box-shadow:0 12px 35px rgba(0,0,0,0.6); margin-bottom:0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; font-size:16px; font-weight:700; color:#fff;">🛠️ Chart Library Repair & Maintenance</h3>
+        <button class="btn btn-sm" id="btnCloseRepairModal" style="padding:2px 8px;">✕</button>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+        Automatically eliminates white dot noise artifacts from broken Milo DXT1 <code>album.png</code> files, ensures <code>icon = fnf</code> in all <code>song.ini</code> files (eliminating YARG "Unknown Sources" duplicates), and audits duplicate charts.
+      </p>
+      <div class="settings-grid" style="margin-bottom:12px;">
+        <label for="repairTargetDir">Chart Directory:</label>
+        <div class="path-input-group" style="width:100%;">
+          <input type="text" id="repairTargetDir" placeholder="D:\Charts\Fortnite Festival">
+          <button class="btn btn-primary" id="btnBrowseRepairDir">Browse...</button>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; font-size:13px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkFixArt" checked> Fix Album Art (eliminate white dot noise artifacts)
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkFixIcons" checked> Ensure song.ini has <code>icon = fnf</code> (clears YARG Unknown Sources)
+        </label>
+      </div>
+      <div id="repairResults" style="display:none; padding:10px 14px; background:#0d0d0f; border-radius:6px; font-size:12px; margin-bottom:14px; max-height:160px; overflow-y:auto; line-height:1.6; border:1px solid var(--card-border);">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" id="btnCancelRepair">Close</button>
+        <button class="btn btn-success" id="btnRunRepair">🚀 Run Library Repair</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output & Basic Settings -->
+  <div class="card">
+    <div class="settings-grid">
+      <label for="outputDir">Output Directory:</label>
+      <div class="path-input-group">
+        <input type="text" id="outputDir" placeholder="Select Clone Hero songs output directory...">
+        <button class="btn btn-primary" id="btnBrowseOutput">Browse...</button>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkOverwrite"> Overwrite Existing
+      </label>
+    </div>
+  </div>
+
+  <!-- Advanced Settings Expander -->
+  <details id="advancedDetails">
+    <summary>⚙ Advanced Settings (Threads & Charter)</summary>
+    <div class="advanced-content">
+      <div class="advanced-field">
+        <label for="workerThreads">Worker Threads:</label>
+        <input type="number" id="workerThreads" min="1" max="32" value="4" style="background:#0d0d0f; border:1px solid var(--card-border); color:#fff; padding:6px 10px; border-radius:6px;">
+      </div>
+      <div class="advanced-field">
+        <label for="stemThreads">Audio Stem Threads:</label>
+        <input type="number" id="stemThreads" min="1" max="16" value="2" style="background:#0d0d0f; border:1px solid var(--card-border); color:#fff; padding:6px 10px; border-radius:6px;">
+      </div>
+      <div class="advanced-field">
+        <label for="charterName">Default Charter:</label>
+        <input type="text" id="charterName" value="Dansla116" style="width:160px;">
+      </div>
+    </div>
+  </details>
+
+  <!-- Actions Toolbar -->
+  <div class="card" style="padding: 10px 16px;">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn btn-primary" id="btnAddFiles">➕ Add Files...</button>
+        <button class="btn" id="btnAddFolder">📁 Add Folder...</button>
+        <button class="btn btn-sm" id="btnSelectAll">☑ Select All</button>
+        <button class="btn btn-sm" id="btnRemoveSelected">🗑 Remove Selected</button>
+        <button class="btn btn-sm" id="btnClearAll">Clear All</button>
+        <span class="counter-badge" id="counterBadge">0 songs</span>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-success" id="btnMainAction">🚀 Start Conversion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <p>📂 Drag and drop Rock Band CON files or folders here</p>
+    <span>or use the 'Add Files...' / 'Add Folder...' buttons above</span>
+  </div>
+
+  <!-- Song Queue Table -->
+  <div class="table-container">
+    <table id="queueTable">
+      <thead>
+        <tr>
+          <th style="width: 36px;"><input type="checkbox" id="chkHeaderSelectAll"></th>
+          <th>Song Title / Path</th>
+          <th>Artist / Album</th>
+          <th style="width: 90px;">Size</th>
+          <th style="width: 120px;">Status</th>
+          <th style="width: 50px;"></th>
+        </tr>
+      </thead>
+      <tbody id="queueBody">
+        <tr>
+          <td colspan="6" class="empty-state">No songs queued yet. Add some files or a folder to begin.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Global Progress -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-header">
+      <span id="progressPercent">0% (0 / 0 songs)</span>
+      <span id="progressEta">⏱ ETA: --:--</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
+    </div>
+    <div class="progress-stats">
+      <span id="progressThroughput">⚡ Speed: 0.0 songs/s</span>
+      <span id="progressElapsed">⌛ Elapsed: 00:00</span>
+    </div>
+  </div>
+
+  <!-- Log Drawer -->
+  <div class="log-card">
+    <div class="log-header">
+      <span>Console Output</span>
+      <button class="btn btn-sm" id="btnClearLogs">Clear Log</button>
+    </div>
+    <div class="log-console" id="logConsole">
+      <div class="log-line info">[System] Ready. Add Rock Band CON files to convert.</div>
+    </div>
+  </div>
+
+  <script>
+    // App State
+    let queueItems = [];
+    let isConverting = false;
+    let pollInterval = null;
+
+    // Elements
+    const outputDirInput = document.getElementById("outputDir");
+    const chkOverwrite = document.getElementById("chkOverwrite");
+    const workerThreadsInput = document.getElementById("workerThreads");
+    const stemThreadsInput = document.getElementById("stemThreads");
+    const charterNameInput = document.getElementById("charterName");
+    const counterBadge = document.getElementById("counterBadge");
+    const btnMainAction = document.getElementById("btnMainAction");
+    const queueBody = document.getElementById("queueBody");
+    const chkHeaderSelectAll = document.getElementById("chkHeaderSelectAll");
+    const dropZone = document.getElementById("dropZone");
+    const logConsole = document.getElementById("logConsole");
+    const progressBarFill = document.getElementById("progressBarFill");
+    const progressPercent = document.getElementById("progressPercent");
+    const progressEta = document.getElementById("progressEta");
+    const progressThroughput = document.getElementById("progressThroughput");
+    const progressElapsed = document.getElementById("progressElapsed");
+
+    // Init: Load Config & Queue
+    async function init() {
+      try {
+        const res = await fetch("/api/init");
+        const data = await res.json();
+        if (data.config) {
+          outputDirInput.value = data.config.output_dir || "";
+          chkOverwrite.checked = !!data.config.overwrite;
+          workerThreadsInput.value = data.config.worker_threads || 4;
+          stemThreadsInput.value = data.config.stem_threads || 2;
+          charterNameInput.value = data.config.charter || "Dansla116";
+        }
+        if (data.queue) {
+          queueItems = data.queue;
+          renderQueue();
+        }
+      } catch (err) {
+        log("Failed to initialize: " + err, "error");
+      }
+    }
+
+    // Logging helper
+    function log(msg, level = "info") {
+      const line = document.createElement("div");
+      line.className = `log-line ${level}`;
+      line.textContent = msg;
+      logConsole.appendChild(line);
+      logConsole.scrollTop = logConsole.scrollHeight;
+    }
+
+    // Render Queue Table
+    function renderQueue() {
+      if (!queueItems || queueItems.length === 0) {
+        queueBody.innerHTML = `<tr><td colspan="6" class="empty-state">No songs queued yet. Add some files or a folder to begin.</td></tr>`;
+        counterBadge.textContent = "0 songs";
+        chkHeaderSelectAll.checked = false;
+        return;
+      }
+
+      const selectedCount = queueItems.filter(it => it.selected).length;
+      counterBadge.textContent = `${queueItems.length} songs` + (selectedCount > 0 ? ` (${selectedCount} selected)` : "");
+      chkHeaderSelectAll.checked = selectedCount > 0 && selectedCount === queueItems.length;
+
+      let html = "";
+      for (const it of queueItems) {
+        let badgeClass = "badge-pending";
+        let badgeText = "Pending";
+        if (it.state === "converting") {
+          badgeClass = "badge-converting";
+          badgeText = "Converting...";
+        } else if (it.state === "done") {
+          badgeClass = "badge-done";
+          badgeText = it.elapsed_sec ? `Done (${it.elapsed_sec.toFixed(1)}s)` : "Done";
+        } else if (it.state === "skipped") {
+          badgeClass = "badge-skipped";
+          badgeText = "Skipped";
+        } else if (it.state === "error") {
+          badgeClass = "badge-error";
+          badgeText = "Error ⚠";
+        }
+
+        html += `
+          <tr data-id="${it.id}">
+            <td><input type="checkbox" class="row-chk" data-id="${it.id}" ${it.selected ? "checked" : ""} ${isConverting ? "disabled" : ""}></td>
+            <td>
+              <div class="song-title-cell">${escapeHtml(it.title || it.filename)}</div>
+              <div class="song-subtitle-cell">${escapeHtml(it.file_path)}</div>
+            </td>
+            <td>
+              <div class="song-title-cell" style="font-weight:normal;">${escapeHtml(it.artist || "Unknown Artist")}</div>
+              <div class="song-subtitle-cell">${escapeHtml(it.album || "")}</div>
+            </td>
+            <td><span style="color:var(--text-muted);">${escapeHtml(it.formatted_size || "")}</span></td>
+            <td><span class="badge ${badgeClass}" title="${escapeHtml(it.error_message || "")}">${badgeText}</span></td>
+            <td>
+              <button class="btn btn-sm" onclick="removeSingleItem('${it.id}')" ${isConverting ? "disabled" : ""} style="padding:2px 8px; color:var(--text-muted);">✕</button>
+            </td>
+          </tr>
+        `;
+      }
+      queueBody.innerHTML = html;
+
+      // Bind row checkboxes
+      document.querySelectorAll(".row-chk").forEach(chk => {
+        chk.addEventListener("change", (e) => {
+          const id = e.target.getAttribute("data-id");
+          const item = queueItems.find(x => x.id === id);
+          if (item) item.selected = e.target.checked;
+          const sel = queueItems.filter(it => it.selected).length;
+          counterBadge.textContent = `${queueItems.length} songs` + (sel > 0 ? ` (${sel} selected)` : "");
+          chkHeaderSelectAll.checked = sel > 0 && sel === queueItems.length;
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Save config on changes
+    async function saveConfig() {
+      const config = {
+        output_dir: outputDirInput.value.trim(),
+        overwrite: chkOverwrite.checked,
+        worker_threads: parseInt(workerThreadsInput.value) || 4,
+        stem_threads: parseInt(stemThreadsInput.value) || 2,
+        charter: charterNameInput.value.trim() || "Dansla116"
+      };
+      try {
+        await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config)
+        });
+      } catch (err) {}
+    }
+
+    outputDirInput.addEventListener("change", saveConfig);
+    chkOverwrite.addEventListener("change", saveConfig);
+    workerThreadsInput.addEventListener("change", saveConfig);
+    stemThreadsInput.addEventListener("change", saveConfig);
+    charterNameInput.addEventListener("change", saveConfig);
+
+    // Browse Output Folder
+    document.getElementById("btnBrowseOutput").addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/browse/output", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ current: outputDirInput.value })
+        });
+        const data = await res.json();
+        if (data.path) {
+          outputDirInput.value = data.path;
+          saveConfig();
+        }
+      } catch (err) {
+        log("Browse output failed: " + err, "error");
+      }
+    });
+
+    // Add Files (Native Picker)
+    document.getElementById("btnAddFiles").addEventListener("click", async () => {
+      try {
+        log("Opening file chooser...");
+        const res = await fetch("/api/browse/files", { method: "POST" });
+        const data = await res.json();
+        if (data.files && data.files.length > 0) {
+          await addFilesToQueue(data.files);
+        }
+      } catch (err) {
+        log("Add files error: " + err, "error");
+      }
+    });
+
+    // Add Folder (Native Picker)
+    document.getElementById("btnAddFolder").addEventListener("click", async () => {
+      try {
+        log("Opening directory chooser...");
+        const res = await fetch("/api/browse/folder", { method: "POST" });
+        const data = await res.json();
+        if (data.folder) {
+          log(`Scanning folder: ${data.folder}...`);
+          await addFolderToQueue(data.folder);
+        }
+      } catch (err) {
+        log("Add folder error: " + err, "error");
+      }
+    });
+
+    // Add Files to Queue Backend
+    async function addFilesToQueue(files) {
+      log(`Loading metadata for ${files.length} song(s)...`);
+      try {
+        const res = await fetch("/api/queue/add_files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files })
+        });
+        const data = await res.json();
+        if (data.queue) {
+          queueItems = data.queue;
+          renderQueue();
+          log(`Successfully added ${data.added_count || 0} song(s) to queue.`, "info");
+        }
+      } catch (err) {
+        log("Failed to add files: " + err, "error");
+      }
+    }
+
+    // Add Folder to Queue Backend
+    async function addFolderToQueue(folder) {
+      log(`Scanning folder '${folder}' for Rock Band CON packages...`);
+      try {
+        const res = await fetch("/api/queue/add_folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folder })
+        });
+        const data = await res.json();
+        if (data.queue) {
+          queueItems = data.queue;
+          renderQueue();
+          log(`Discovered and queued ${data.added_count || 0} CON package(s).`, "info");
+        }
+      } catch (err) {
+        log("Failed to scan folder: " + err, "error");
+      }
+    }
+
+    // Drag & Drop
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      
+      // If native file drag
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const paths = [];
+        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+          const f = e.dataTransfer.files[i];
+          if (f.path) {
+            paths.push(f.path);
+          }
+        }
+        if (paths.length > 0) {
+          await addFilesToQueue(paths);
+        } else {
+          log("Drop detected. Opening selector to import dropped items...", "info");
+          document.getElementById("btnAddFiles").click();
+        }
+      }
+    });
+
+    // Select All / Deselect All
+    document.getElementById("btnSelectAll").addEventListener("click", () => {
+      const allSelected = queueItems.length > 0 && queueItems.every(x => x.selected);
+      queueItems.forEach(x => x.selected = !allSelected);
+      renderQueue();
+    });
+
+    chkHeaderSelectAll.addEventListener("change", (e) => {
+      queueItems.forEach(x => x.selected = e.target.checked);
+      renderQueue();
+    });
+
+    // Clear All
+    document.getElementById("btnClearAll").addEventListener("click", async () => {
+      if (isConverting) return;
+      try {
+        await fetch("/api/queue/clear", { method: "POST" });
+        queueItems = [];
+        renderQueue();
+        log("Queue cleared.", "info");
+      } catch (err) {
+        log("Failed to clear queue: " + err, "error");
+      }
+    });
+
+    // Remove Selected
+    document.getElementById("btnRemoveSelected").addEventListener("click", async () => {
+      if (isConverting) return;
+      const selectedIds = queueItems.filter(x => x.selected).map(x => x.id);
+      if (selectedIds.length === 0) return;
+
+      try {
+        const res = await fetch("/api/queue/remove", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: selectedIds })
+        });
+        const data = await res.json();
+        if (data.queue) {
+          queueItems = data.queue;
+          renderQueue();
+          log(`Removed ${selectedIds.length} item(s).`, "info");
+        }
+      } catch (err) {
+        log("Failed to remove items: " + err, "error");
+      }
+    });
+
+    // Remove Single Item
+    window.removeSingleItem = async function(id) {
+      if (isConverting) return;
+      try {
+        const res = await fetch("/api/queue/remove", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: [id] })
+        });
+        const data = await res.json();
+        if (data.queue) {
+          queueItems = data.queue;
+          renderQueue();
+        }
+      } catch (err) {
+        log("Failed to remove item: " + err, "error");
+      }
+    };
+
+    // Clear Logs
+    document.getElementById("btnClearLogs").addEventListener("click", () => {
+      logConsole.innerHTML = "";
+    });
+
+    // Conversion Control
+    btnMainAction.addEventListener("click", async () => {
+      if (isConverting) {
+        // Cancel
+        try {
+          await fetch("/api/convert/cancel", { method: "POST" });
+          log("Canceling conversion...", "warning");
+        } catch (err) {
+          log("Cancel failed: " + err, "error");
+        }
+      } else {
+        // Start
+        const outDir = outputDirInput.value.trim();
+        if (!outDir) {
+          alert("Please select or specify an output directory for converted songs first.");
+          outputDirInput.focus();
+          return;
+        }
+
+        if (queueItems.length === 0) {
+          alert("Please add at least one Rock Band CON song to convert.");
+          return;
+        }
+
+        await saveConfig();
+
+        // Determine which items to convert: selected items, or all pending/error items
+        const selected = queueItems.filter(x => x.selected);
+        const targetIds = selected.length > 0 ? selected.map(x => x.id) : queueItems.map(x => x.id);
+
+        try {
+          const res = await fetch("/api/convert/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ item_ids: targetIds })
+          });
+          const data = await res.json();
+          if (data.success) {
+            isConverting = true;
+            updateConversionUI(true);
+            startPollingStatus();
+            log(`Starting conversion of ${targetIds.length} song(s)...`, "info");
+          } else {
+            alert(data.message || "Failed to start conversion.");
+          }
+        } catch (err) {
+          log("Start conversion error: " + err, "error");
+        }
+      }
+    });
+
+    function updateConversionUI(converting) {
+      isConverting = converting;
+      if (converting) {
+        btnMainAction.textContent = "⛔ Cancel Conversion";
+        btnMainAction.className = "btn btn-danger";
+        document.getElementById("btnAddFiles").disabled = true;
+        document.getElementById("btnAddFolder").disabled = true;
+        document.getElementById("btnClearAll").disabled = true;
+        document.getElementById("btnRemoveSelected").disabled = true;
+      } else {
+        btnMainAction.textContent = "🚀 Start Conversion";
+        btnMainAction.className = "btn btn-success";
+        document.getElementById("btnAddFiles").disabled = false;
+        document.getElementById("btnAddFolder").disabled = false;
+        document.getElementById("btnClearAll").disabled = false;
+        document.getElementById("btnRemoveSelected").disabled = false;
+      }
+    }
+
+    // Status Polling
+    function startPollingStatus() {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/status");
+          const data = await res.json();
+
+          if (data.queue) {
+            queueItems = data.queue;
+            renderQueue();
+          }
+
+          if (data.progress) {
+            progressBarFill.style.width = `${data.progress.percent}%`;
+            progressPercent.textContent = `${data.progress.percent.toFixed(1)}% (${data.progress.processed} / ${data.progress.total} songs)`;
+            progressEta.textContent = `⏱ ETA: ${data.progress.eta || "--:--"}`;
+            progressThroughput.textContent = `⚡ Speed: ${(data.progress.throughput || 0).toFixed(1)} songs/s`;
+            progressElapsed.textContent = `⌛ Elapsed: ${data.progress.elapsed || "00:00"}`;
+          }
+
+          if (data.logs && data.logs.length > 0) {
+            for (const l of data.logs) {
+              log(l.message, l.level);
+            }
+          }
+
+          if (!data.is_converting && isConverting) {
+            isConverting = false;
+            updateConversionUI(false);
+            clearInterval(pollInterval);
+            pollInterval = null;
+            log("Conversion finished.", "info");
+          }
+        } catch (err) {}
+      }, 300);
+    }
+
+    // Library Repair Modal Logic
+    const repairModal = document.getElementById("repairModal");
+    const btnOpenRepairModal = document.getElementById("btnOpenRepairModal");
+    const btnCloseRepairModal = document.getElementById("btnCloseRepairModal");
+    const btnCancelRepair = document.getElementById("btnCancelRepair");
+    const btnRunRepair = document.getElementById("btnRunRepair");
+    const repairTargetDir = document.getElementById("repairTargetDir");
+    const btnBrowseRepairDir = document.getElementById("btnBrowseRepairDir");
+    const repairResults = document.getElementById("repairResults");
+
+    btnOpenRepairModal.addEventListener("click", () => {
+      repairTargetDir.value = outputDirInput.value || "D:\\Charts\\Fortnite Festival";
+      repairResults.style.display = "none";
+      repairResults.innerHTML = "";
+      repairModal.style.display = "flex";
+    });
+
+    function closeRepairModal() {
+      repairModal.style.display = "none";
+    }
+
+    btnCloseRepairModal.addEventListener("click", closeRepairModal);
+    btnCancelRepair.addEventListener("click", closeRepairModal);
+
+    btnBrowseRepairDir.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/browse/folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (data.folder) {
+          repairTargetDir.value = data.folder;
+        }
+      } catch (err) {}
+    });
+
+    btnRunRepair.addEventListener("click", async () => {
+      const target = repairTargetDir.value.trim();
+      if (!target) {
+        alert("Please select or enter a chart directory to repair.");
+        return;
+      }
+      btnRunRepair.disabled = true;
+      btnRunRepair.textContent = "⏳ Repairing Library...";
+      repairResults.style.display = "block";
+      repairResults.innerHTML = `<span style="color:#93c5fd;">Scanning and repairing '${target}'...</span>`;
+
+      try {
+        const res = await fetch("/api/library/repair", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            target_dir: target,
+            fix_art: document.getElementById("chkFixArt").checked,
+            fix_icons: document.getElementById("chkFixIcons").checked,
+            icon: "fnf"
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.stats) {
+          const s = data.stats;
+          let html = `
+            <div style="color:#4ade80; font-weight:600; margin-bottom:6px;">✓ Repair Completed in ${s.elapsed_seconds.toFixed(2)}s</div>
+            <div>• Songs scanned: <b>${s.total_songs}</b></div>
+            <div>• song.ini updated with icon=fnf: <b>${s.inis_updated}</b></div>
+            <div>• Album images repaired: <b>${s.images_repaired}</b> (removed <b>${s.pixels_fixed}</b> white noise dots)</div>
+          `;
+          if (s.duplicates && s.duplicates.length > 0) {
+            html += `<div style="color:#fbbf24; margin-top:6px;"><b>⚠ Duplicates detected:</b></div>`;
+            for (const d of s.duplicates) {
+              html += `<div style="padding-left:10px; color:#d4d4d8;">- ${d.artist} - ${d.title} (${d.folders.length} copies)</div>`;
+            }
+          } else {
+            html += `<div style="color:#a1a1aa; margin-top:4px;">• No duplicate song collisions found.</div>`;
+          }
+          repairResults.innerHTML = html;
+        } else {
+          repairResults.innerHTML = `<span style="color:#f87171;">Error: ${data.error || "Repair failed"}</span>`;
+        }
+      } catch (err) {
+        repairResults.innerHTML = `<span style="color:#f87171;">Network Error: ${err.message}</span>`;
+      } finally {
+        btnRunRepair.disabled = false;
+        btnRunRepair.textContent = "🚀 Run Library Repair";
+      }
+    });
+
+    // Run Init
+    init();
+  </script>
+</body>
+</html>

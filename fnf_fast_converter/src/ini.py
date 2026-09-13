@@ -6,6 +6,8 @@ placed immediately beneath the '[song]' section header.
 """
 
 from __future__ import annotations
+import re
+from pathlib import Path
 from typing import Any, Dict, Union, Optional
 from .dta import parse_dta, extract_dta_metadata
 
@@ -109,3 +111,56 @@ def generate_song_ini(
     lines.append("")  # Trailing newline
 
     return "\n".join(lines)
+
+
+def ensure_ini_icon(ini_target: str | Path, icon: str = "fnf") -> tuple[bool, str]:
+    """
+    Safely ensures an INI file or string has `icon = {icon}` directly under `[song]`.
+    
+    If `ini_target` is a file path, updates the file on disk if changes are needed.
+    Returns (updated_bool, new_or_current_content).
+    """
+    is_path = False
+    path: Optional[Path] = None
+    if isinstance(ini_target, Path):
+        is_path = True
+        path = ini_target
+    elif isinstance(ini_target, str) and (len(ini_target) < 1024 and ("\n" not in ini_target) and Path(ini_target).is_file()):
+        is_path = True
+        path = Path(ini_target)
+
+    if is_path and path is not None:
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except Exception as exc:
+            return False, str(exc)
+    else:
+        content = str(ini_target)
+
+    nl = "\r\n" if "\r\n" in content else "\n"
+
+    # 1. Check if an icon line already exists
+    icon_pattern = re.compile(r"^[ \t]*icon[ \t]*=.*$", re.MULTILINE | re.IGNORECASE)
+    match = icon_pattern.search(content)
+
+    if match:
+        existing_line = match.group(0)
+        curr_val = existing_line.split("=", 1)[1].strip().lower()
+        if curr_val == icon.lower():
+            return False, content
+        new_content = icon_pattern.sub(f"icon = {icon}", content, count=1)
+    else:
+        # 2. Insert icon directly below [song]
+        song_pattern = re.compile(r"^[ \t]*\[song\][ \t]*$", re.MULTILINE | re.IGNORECASE)
+        match_song = song_pattern.search(content)
+        if match_song:
+            end = match_song.end()
+            new_content = content[:end] + nl + f"icon = {icon}" + content[end:]
+        else:
+            new_content = f"[song]{nl}icon = {icon}{nl}" + content
+
+    if is_path and path is not None:
+        path.write_text(new_content, encoding="utf-8")
+
+    return True, new_content
+

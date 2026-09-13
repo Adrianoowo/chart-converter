@@ -8,6 +8,7 @@ into standard PNG bytes (album.png) in memory in <1ms without external tools.
 from __future__ import annotations
 import struct
 import zlib
+from pathlib import Path
 from typing import Tuple, Optional
 
 try:
@@ -217,8 +218,117 @@ def decode_png_xbox(png_xbox_data: bytes, width: int = 256, height: int = 256) -
     # Decode DXT1 blocks
     if _HAS_NUMPY:
         rgb_bytes = decode_dxt1_numpy(swapped, width, height)
+        rgb_bytes, _ = clean_white_dot_artifacts(rgb_bytes, width, height)
     else:
         rgb_bytes = decode_dxt1_python(swapped, width, height)
 
     # Encode to PNG
     return make_png_raw(rgb_bytes, width, height)
+
+
+def clean_white_dots_array(arr: np.ndarray) -> tuple[np.ndarray, int]:
+    """
+    Suppresses isolated white dot artifacts (1x1 or tiny 1x2 noise dots)
+    caused by DXT1 quantization and decoding edge cases, while preserving
+    legitimate white text, strokes, borders, and high-key backgrounds.
+    """
+    is_white = np.all(arr >= 250, axis=-1)
+    if not np.any(is_white):
+        return arr, 0
+
+    pad_w = np.pad(is_white, 1, mode="constant", constant_values=False)
+    nbr_w_cnt = (
+        pad_w[:-2, :-2].astype(np.uint8) + pad_w[:-2, 1:-1] + pad_w[:-2, 2:] +
+        pad_w[1:-1, :-2] +                                    pad_w[1:-1, 2:] +
+        pad_w[2:, :-2]   + pad_w[2:, 1:-1]   + pad_w[2:, 2:]
+    )
+
+    # Isolated 1x1 dot
+    iso_1x1 = is_white & (nbr_w_cnt == 0)
+
+    # Isolated 2-pixel pair: white pixel with exactly 1 white neighbor whose only white neighbor is also this pixel
+    pad_cnt = np.pad(nbr_w_cnt, 1, mode="constant", constant_values=99)
+    nbr_is_pair = np.zeros(arr.shape[:2], dtype=bool)
+    for dy in [-1, 0, 1]:
+        for dx in [-1, 0, 1]:
+            if dy == 0 and dx == 0:
+                continue
+            y_start, y_end = 1 + dy, (arr.shape[0] + 1 + dy)
+            x_start, x_end = 1 + dx, (arr.shape[1] + 1 + dx)
+            n_w = pad_w[y_start:y_end, x_start:x_end]
+            n_cnt = pad_cnt[y_start:y_end, x_start:x_end]
+            nbr_is_pair |= (n_w & (n_cnt == 1))
+
+    iso_2px = is_white & (nbr_w_cnt == 1) & nbr_is_pair
+
+    cand = iso_1x1 | iso_2px
+    if not np.any(cand):
+        return arr, 0
+
+    pad_c = np.pad(arr, ((1, 1), (1, 1), (0, 0)), mode="edge")
+
+    # 8 neighbors
+    neighbors = [
+        (pad_c[:-2, :-2], pad_w[:-2, :-2, None]),
+        (pad_c[:-2, 1:-1], pad_w[:-2, 1:-1, None]),
+        (pad_c[:-2, 2:],   pad_w[:-2, 2:, None]),
+        (pad_c[1:-1, :-2], pad_w[1:-1, :-2, None]),
+        (pad_c[1:-1, 2:],  pad_w[1:-1, 2:, None]),
+        (pad_c[2:, :-2],   pad_w[2:, :-2, None]),
+        (pad_c[2:, 1:-1],  pad_w[2:, 1:-1, None]),
+        (pad_c[2:, 2:],    pad_w[2:, 2:, None]),
+    ]
+
+    sum_c = np.zeros(arr.shape, dtype=np.uint32)
+    cnt_c = np.zeros((arr.shape[0], arr.shape[1], 1), dtype=np.uint32)
+
+    for n_rgb, n_is_w in neighbors:
+        valid = ~n_is_w
+        sum_c += np.where(valid, n_rgb, 0).astype(np.uint32)
+        cnt_c += valid.astype(np.uint32)
+
+    safe_cnt = np.maximum(cnt_c, 1)
+    avg_c = (sum_c // safe_cnt).astype(np.uint8)
+
+    # Neighbor average must be non-white (at least one channel < 235 or mean < 240)
+    sig_non_white = np.any(avg_c < 235, axis=-1, keepdims=True) | (np.mean(avg_c, axis=-1, keepdims=True) < 240)
+    valid_replace = cand[:, :, None] & (cnt_c > 0) & sig_non_white
+
+    out = np.where(valid_replace, avg_c, arr)
+    fixed = int(np.sum(valid_replace[:, :, 0]))
+    return out, fixed
+
+
+def clean_white_dot_artifacts(rgb_bytes: bytes, width: int, height: int) -> tuple[bytes, int]:
+    """Cleans white dot noise from raw RGB bytes."""
+    if not _HAS_NUMPY:
+        return rgb_bytes, 0
+    arr = np.frombuffer(rgb_bytes, dtype=np.uint8).reshape((height, width, 3))
+    cleaned, fixed = clean_white_dots_array(arr)
+    return cleaned.tobytes(), fixed
+
+
+def repair_album_file(album_path: str | Path) -> tuple[bool, int]:
+    """
+    Inspects and repairs an existing album.png file on disk, removing white dot artifacts.
+    Returns (repaired_bool, fixed_pixels_count).
+    """
+    path = Path(album_path)
+    if not path.is_file():
+        return False, 0
+    try:
+        if _HAS_PIL:
+            with Image.open(path) as img:
+                img_rgb = img.convert("RGB")
+                arr = np.array(img_rgb) if _HAS_NUMPY else None
+                if arr is None:
+                    return False, 0
+                cleaned, fixed = clean_white_dots_array(arr)
+                if fixed > 0:
+                    cleaned_img = Image.fromarray(cleaned)
+                    cleaned_img.save(path, format="PNG", optimize=True)
+                    return True, fixed
+        return False, 0
+    except Exception:
+        return False, 0
+

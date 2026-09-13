@@ -2,6 +2,8 @@
 fnf_fast_converter - High-Speed Native Rock Band CON to Clone Hero Converter
 """
 
+__version__ = "1.1.0"
+
 try:
     from .stfs import STFSPackage, STFSError, STFSEntry, STFSHeader
 except ImportError:
@@ -27,12 +29,12 @@ except ImportError:
     pass
 
 try:
-    from .image import decode_png_xbox, make_png_raw
+    from .image import decode_png_xbox, make_png_raw, clean_white_dot_artifacts, clean_white_dots_array, repair_album_file
 except ImportError:
     pass
 
 try:
-    from .ini import generate_song_ini
+    from .ini import generate_song_ini, ensure_ini_icon
 except ImportError:
     pass
 

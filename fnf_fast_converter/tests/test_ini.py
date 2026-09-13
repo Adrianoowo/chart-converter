@@ -5,7 +5,7 @@ Unit tests for Clone Hero song.ini synthesizer.
 import pytest
 from pathlib import Path
 from fnf_fast_converter.src.dta import parse_dta
-from fnf_fast_converter.src.ini import generate_song_ini
+from fnf_fast_converter.src.ini import generate_song_ini, ensure_ini_icon
 
 SAMPLE_BUDDY_HOLLY_DTA = """
 (buddyhollyfnf
@@ -165,3 +165,34 @@ class TestSongIniSynthesizer:
         assert len(ref_lines) == len(gen_lines)
         for ref_l, gen_l in zip(ref_lines, gen_lines):
             assert ref_l == gen_l
+
+    def test_ensure_ini_icon_insertion_and_idempotency(self, tmp_path):
+        # 1. Test missing icon inserted directly below [song]
+        raw_ini = "[song]\nname = Test Track\nartist = Test Artist\n"
+        ini_file = tmp_path / "song.ini"
+        ini_file.write_text(raw_ini, encoding="utf-8")
+
+        updated, res = ensure_ini_icon(ini_file, "fnf")
+        assert updated is True
+        content = ini_file.read_text(encoding="utf-8")
+        lines = content.splitlines()
+        assert lines[0] == "[song]"
+        assert lines[1] == "icon = fnf"
+        assert lines[2] == "name = Test Track"
+
+        # 2. Test idempotency (no double-insertion)
+        updated2, res2 = ensure_ini_icon(ini_file, "fnf")
+        assert updated2 is False
+        assert res2 == content
+
+        # 3. Test updating an existing non-fnf icon
+        raw_diff_icon = "[song]\nicon = old_source\nname = Track\n"
+        ini_file2 = tmp_path / "song2.ini"
+        ini_file2.write_text(raw_diff_icon, encoding="utf-8")
+
+        updated3, res3 = ensure_ini_icon(ini_file2, "fnf")
+        assert updated3 is True
+        content2 = ini_file2.read_text(encoding="utf-8")
+        assert "icon = fnf" in content2
+        assert "icon = old_source" not in content2
+

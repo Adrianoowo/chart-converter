@@ -14,6 +14,9 @@ from fnf_fast_converter.src.image import (
     decode_png_xbox,
     make_png_raw,
     PNG_SIGNATURE,
+    clean_white_dots_array,
+    clean_white_dot_artifacts,
+    repair_album_file,
 )
 
 
@@ -184,3 +187,57 @@ class TestImageDecoder:
         avg_ms = (t1 - t0) / iters * 1000
         print(f"Average DXT1 image decode time: {avg_ms:.3f} ms")
         assert avg_ms < 5.0  # Must be well under 5ms
+
+    def test_white_dot_cleaning_isolated_pixels(self):
+        # Background: dark magenta (100, 20, 80)
+        arr = np.full((64, 64, 3), [100, 20, 80], dtype=np.uint8)
+        # Add 5 isolated white dots
+        arr[10, 10] = [255, 255, 255]
+        arr[20, 30] = [255, 255, 255]
+        arr[40, 50] = [255, 255, 255]
+        arr[5, 5] = [255, 255, 255]
+        arr[5, 6] = [255, 255, 255]  # 2-pixel isolated pair
+
+        cleaned, fixed = clean_white_dots_array(arr)
+        assert fixed == 5
+        assert np.all(cleaned[10, 10] == [100, 20, 80])
+        assert np.all(cleaned[20, 30] == [100, 20, 80])
+        assert np.all(cleaned[40, 50] == [100, 20, 80])
+        assert np.all(cleaned[5, 5] == [100, 20, 80])
+        assert np.all(cleaned[5, 6] == [100, 20, 80])
+
+    def test_white_dot_cleaning_preserves_white_text_and_lines(self):
+        arr = np.full((64, 64, 3), [30, 30, 30], dtype=np.uint8)
+        # 3x3 white block (letter stroke)
+        arr[10:13, 10:13] = [255, 255, 255]
+        # Vertical 1-pixel white line (stem)
+        arr[20:30, 20] = [255, 255, 255]
+
+        cleaned, fixed = clean_white_dots_array(arr)
+        # Zero pixels modified because they are continuous text/lines
+        assert fixed == 0
+        assert np.all(cleaned[11, 11] == [255, 255, 255])
+        assert np.all(cleaned[25, 20] == [255, 255, 255])
+
+    def test_repair_album_file_on_disk(self, tmp_path):
+        # Create a test image on disk with white dots
+        test_img = Image.new("RGB", (64, 64), color=(60, 120, 180))
+        test_arr = np.array(test_img)
+        test_arr[15, 15] = [255, 255, 255]
+        file_path = tmp_path / "album.png"
+        Image.fromarray(test_arr).save(file_path, format="PNG")
+
+        repaired, count = repair_album_file(file_path)
+        assert repaired is True
+        assert count == 1
+
+        # Check repaired image
+        with Image.open(file_path) as reloaded:
+            arr_after = np.array(reloaded)
+            assert np.all(arr_after[15, 15] == [60, 120, 180])
+
+        # Second run should report 0 fixed (idempotent)
+        repaired2, count2 = repair_album_file(file_path)
+        assert repaired2 is False
+        assert count2 == 0
+
