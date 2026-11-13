@@ -35,26 +35,28 @@ class TestPackagingPipeline:
         # Should execute without raising RuntimeError since all packages are installed
         build_standalone.check_prerequisites()
 
-    def test_build_pyinstaller_command_windowed(self):
+    def test_build_pyinstaller_command_default_onefile_console(self):
         paths = build_standalone.get_project_paths()
-        cmd = build_standalone.build_pyinstaller_command(paths, windowed=True)
+        cmd = build_standalone.build_pyinstaller_command(paths)
         
         assert any("--name=FNF_Fast_Converter" in arg for arg in cmd)
-        assert "--onedir" in cmd
-        assert "--windowed" in cmd
+        assert "--onefile" in cmd
+        assert "--console" in cmd
         assert "--collect-all" in cmd
         assert "customtkinter" in cmd
         assert "soundfile" in cmd
         assert "PIL" in cmd
         assert "windnd" in cmd
+        assert "tkinter" in cmd
         assert any("fnf_fast_converter" in arg for arg in cmd)
 
-    def test_build_pyinstaller_command_console(self):
+    def test_build_pyinstaller_command_windowed_onedir(self):
         paths = build_standalone.get_project_paths()
-        cmd = build_standalone.build_pyinstaller_command(paths, windowed=False)
+        cmd = build_standalone.build_pyinstaller_command(paths, windowed=True, onefile=False)
         
-        assert "--console" in cmd
-        assert "--windowed" not in cmd
+        assert "--onedir" in cmd
+        assert "--windowed" in cmd
+        assert "--console" not in cmd
 
     def test_copy_distribution_assets_and_launcher(self, tmp_path):
         out_dir = tmp_path / "FNF_Fast_Converter"
