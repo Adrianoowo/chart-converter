@@ -282,7 +282,7 @@ class WebAppController:
                 logger.error(f"Error handling worker event: {exc}")
 
 
-def create_web_handler(controller: WebAppController):
+def create_web_handler(controller: WebAppController, shutdown_callback: Optional[Any] = None):
     """Factory creating HTTP request handler closing over controller instance."""
 
     class FastConverterHandler(BaseHTTPRequestHandler):
@@ -476,6 +476,18 @@ def create_web_handler(controller: WebAppController):
                     self._send_json({"success": False, "error": str(exc)}, status=400)
                 return
 
+            if path == "/api/shutdown":
+                self._send_json({"success": True, "message": "Shutting down server..."})
+                if shutdown_callback is not None:
+                    def _do_shutdown() -> None:
+                        time.sleep(0.15)
+                        try:
+                            shutdown_callback()
+                        except Exception:
+                            pass
+                    threading.Thread(target=_do_shutdown, daemon=True).start()
+                return
+
             self.send_error(404, "Not Found")
 
     return FastConverterHandler
@@ -489,23 +501,29 @@ def run_web_server(
     """Launch the Web UI HTTP server and open browser."""
     controller = WebAppController(custom_config_path=custom_config_path)
     chosen_port = port if port is not None else _find_free_port(8765)
-    handler_cls = create_web_handler(controller)
+    shutdown_holder: Dict[str, Any] = {"server": None}
+
+    def _shutdown() -> None:
+        srv = shutdown_holder.get("server")
+        if srv is not None:
+            srv.shutdown()
+
+    handler_cls = create_web_handler(controller, shutdown_callback=_shutdown)
 
     server = ThreadingHTTPServer(("127.0.0.1", chosen_port), handler_cls)
+    shutdown_holder["server"] = server
     url = f"http://127.0.0.1:{chosen_port}/"
 
     print("====================================================================")
     print("      FNF Fast Converter — Simple Web Interface")
     print("====================================================================")
     print(f"Running locally at: {url}")
-    print("Press Ctrl+C to stop the server.")
+    print("Keep this window open while using the converter.")
+    print("Close this window, press Ctrl+C, or click Quit in the Web UI to stop.")
     print("====================================================================")
 
     if open_browser:
-        try:
-            webbrowser.open(url)
-        except Exception:
-            pass
+        threading.Timer(0.25, lambda: webbrowser.open(url)).start()
 
     try:
         server.serve_forever()

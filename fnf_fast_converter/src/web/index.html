@@ -445,8 +445,9 @@
       <h1>FNF Fast Converter</h1>
       <p>Rock Band CON to Clone Hero Converter</p>
     </div>
-    <div>
+    <div style="display:flex; gap:8px; align-items:center;">
       <button class="btn" id="btnOpenRepairModal" style="border: 1px solid var(--card-border); background: #1c1c20; font-size: 12px; padding: 7px 14px;">🛠️ Fix Library (Art & Icons)</button>
+      <button class="btn" id="btnQuitServer" title="Stop FNF Fast Converter server" style="border: 1px solid var(--card-border); background: #1c1c20; color: #f87171; font-size: 12px; padding: 7px 12px;">⏻ Quit</button>
     </div>
   </header>
 
@@ -1172,6 +1173,33 @@
         btnRunRepair.textContent = "🚀 Run Library Repair";
       }
     });
+
+    // Quit Server Handler
+    const btnQuitServer = document.getElementById("btnQuitServer");
+    if (btnQuitServer) {
+      btnQuitServer.addEventListener("click", async () => {
+        if (isConverting && !confirm("Conversion is currently running. Stop and quit FNF Fast Converter?")) {
+          return;
+        }
+        btnQuitServer.disabled = true;
+        btnQuitServer.textContent = "Stopping...";
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        try {
+          await fetch("/api/shutdown", { method: "POST" });
+        } catch (err) {
+          // Server may close connection immediately
+        }
+        document.body.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70vh; text-align:center; gap:12px;">
+            <h1 style="margin:0; font-size:24px; color:#f4f4f5;">FNF Fast Converter Stopped</h1>
+            <p style="margin:0; color:#a1a1aa; font-size:14px;">The local server has been shut down cleanly. You can close this browser tab.</p>
+          </div>
+        `;
+      });
+    }
 
     // Run Init
     init();

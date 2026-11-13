@@ -104,7 +104,21 @@ def clean_previous_builds(paths):
     print("  [OK] Clean complete.\n")
 
 
-def build_pyinstaller_command(paths, windowed=True):
+def get_version(paths):
+    """Read package version from pyproject.toml, defaulting to 1.2.0."""
+    pyproject = paths["pkg_root"] / "pyproject.toml"
+    if not pyproject.is_file():
+        pyproject = paths["repo_root"] / "fnf_fast_converter" / "pyproject.toml"
+    if pyproject.is_file():
+        import re
+        text = pyproject.read_text(encoding="utf-8")
+        m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        if m:
+            return m.group(1)
+    return "1.2.0"
+
+
+def build_pyinstaller_command(paths, windowed=False, onefile=True):
     """Construct PyInstaller argument list with all necessary hooks and assets."""
     entry_point = paths["repo_root"] / "run_gui.py"
     if not entry_point.is_file():
@@ -116,6 +130,7 @@ def build_pyinstaller_command(paths, windowed=True):
         raise FileNotFoundError(f"Cannot find GUI entry point script. Looked for run_gui.py and {paths['src_dir'] / 'gui.py'}")
         
     print(f"  Using Entry Point: {entry_point}")
+    print(f"  Bundle Mode      : {'Single Executable (--onefile)' if onefile else 'Directory (--onedir)'}")
     
     # Internal hidden imports to ensure all converter components are bundled
     hidden_imports = [
@@ -126,6 +141,8 @@ def build_pyinstaller_command(paths, windowed=True):
         "PIL.Image",
         "PIL.PngImagePlugin",
         "numpy",
+        "tkinter",
+        "tkinter.filedialog",
         "fnf_fast_converter",
         "fnf_fast_converter.src",
         "fnf_fast_converter.src.gui",
@@ -148,16 +165,17 @@ def build_pyinstaller_command(paths, windowed=True):
         "fnf_fast_converter.src.repair",
     ]
     
+    dist_target = paths["output_dir"] if onefile else paths["dist_root"]
     cmd = [
         sys.executable,
         "-m",
         "PyInstaller",
         "--name=FNF_Fast_Converter",
-        "--onedir",
+        "--onefile" if onefile else "--onedir",
         "--windowed" if windowed else "--console",
         "--clean",
         "--noconfirm",
-        "--distpath", str(paths["dist_root"]),
+        "--distpath", str(dist_target),
         "--workpath", str(paths["build_root"]),
         "--specpath", str(paths["repo_root"]),
         "--paths", str(paths["repo_root"]),
@@ -211,7 +229,7 @@ def execute_build(cmd):
     print(f"\n  [OK] PyInstaller compilation completed in {duration:.2f} seconds.\n")
 
 
-def copy_distribution_assets(paths):
+def copy_distribution_assets(paths, onefile=True):
     """Copy auxiliary documentation, launchers, and README files into dist folder."""
     print("=" * 70)
     print(" 4. Assembling Standalone Distribution Bundle")
@@ -231,54 +249,48 @@ def copy_distribution_assets(paths):
         shutil.copy2(readme_src, out_dir / "README.txt")
         print(f"  [+] Copied README to {out_dir / 'README.txt'}")
 
-    # Copy Web UI assets to ensure presence
-    web_src = paths["src_dir"] / "web"
-    if web_src.is_dir():
-        for target_sub in [
-            out_dir / "web",
-            out_dir / "_internal" / "web",
-            out_dir / "_internal" / "fnf_fast_converter" / "src" / "web",
-        ]:
-            try:
-                target_sub.parent.mkdir(parents=True, exist_ok=True)
-                if target_sub.exists():
-                    shutil.rmtree(target_sub)
-                shutil.copytree(web_src, target_sub)
-            except Exception:
-                pass
-        print(f"  [+] Bundled Web UI assets into standalone distribution")
+    # In --onedir mode, copy Web UI assets and repair_library.py alongside the exe.
+    # In --onefile mode, everything is already embedded inside FNF_Fast_Converter.exe.
+    if not onefile:
+        src_dir = paths.get("src_dir")
+        if src_dir:
+            web_src = src_dir / "web"
+            if web_src.is_dir():
+                for target_sub in [
+                    out_dir / "web",
+                    out_dir / "_internal" / "web",
+                    out_dir / "_internal" / "fnf_fast_converter" / "src" / "web",
+                ]:
+                    try:
+                        target_sub.parent.mkdir(parents=True, exist_ok=True)
+                        if target_sub.exists():
+                            shutil.rmtree(target_sub)
+                        shutil.copytree(web_src, target_sub)
+                    except Exception:
+                        pass
+                print(f"  [+] Bundled Web UI assets into standalone distribution")
 
-    # Copy repair_library.py if present
-    repair_src = paths["repo_root"] / "repair_library.py"
-    if repair_src.is_file():
-        shutil.copy2(repair_src, out_dir / "repair_library.py")
-        print(f"  [+] Copied repair tool: {repair_src.name}")
+        repair_src = paths["repo_root"] / "repair_library.py"
+        if repair_src.is_file():
+            shutil.copy2(repair_src, out_dir / "repair_library.py")
+            print(f"  [+] Copied repair tool: {repair_src.name}")
 
-    # Create convenience launchers inside standalone folder
+    # Create convenience launcher inside standalone folder
     launcher_content = (
         "@echo off\r\n"
         "title FNF Fast Converter\r\n"
         "cd /d \"%~dp0\"\r\n"
-        "start \"\" \"%~dp0FNF_Fast_Converter.exe\" %*\r\n"
-        "exit /b 0\r\n"
+        "\"%~dp0FNF_Fast_Converter.exe\" %*\r\n"
     )
     launcher_path = out_dir / "Run_Converter.bat"
     launcher_path.write_text(launcher_content, encoding="utf-8")
     print(f"  [+] Generated standalone launcher: {launcher_path.name}")
 
-    repair_launcher = (
-        "@echo off\r\n"
-        "title FNF Fast Converter - Library Repair\r\n"
-        "cd /d \"%~dp0\"\r\n"
-        "start \"\" \"%~dp0FNF_Fast_Converter.exe\" %*\r\n"
-        "exit /b 0\r\n"
-    )
-    (out_dir / "Run_Repair.bat").write_text(repair_launcher, encoding="utf-8")
-    print(f"  [+] Generated standalone repair launcher: Run_Repair.bat")
-
     # Generate release ZIP archive
-    zip_base = paths["dist_root"] / "FNF_Fast_Converter-v1.1.2-windows-x64"
-    zip_path = shutil.make_archive(str(zip_base), "zip", root_dir=str(paths["dist_root"]), base_dir="FNF_Fast_Converter")
+    dist_root = paths.get("dist_root", out_dir.parent)
+    version = get_version(paths)
+    zip_base = dist_root / f"FNF_Fast_Converter-v{version}-windows-x64"
+    zip_path = shutil.make_archive(str(zip_base), "zip", root_dir=str(dist_root), base_dir=out_dir.name)
     print(f"  [+] Created distribution ZIP: {Path(zip_path).name} ({os.path.getsize(zip_path) / (1024*1024):.2f} MB)")
     print("  [OK] Bundle assembly complete.\n")
 
@@ -322,8 +334,8 @@ def verify_distribution(paths):
     print(f"  Main Executable   : {exe_path.name} ({exe_mb:.2f} MB)")
     print(f"  Total Files       : {file_count}")
     print(f"  Total Bundle Size : {total_mb:.2f} MB")
-    print(f"  CustomTkinter Res : {'Found' if has_customtkinter_data else 'Not detected (may be internal)'}")
-    print(f"  SoundFile DLLs    : {'Found' if has_soundfile_data else 'Not detected (may be internal)'}")
+    print(f"  CustomTkinter Res : {'Found' if has_customtkinter_data else 'Embedded (single-file)'}")
+    print(f"  SoundFile DLLs    : {'Found' if has_soundfile_data else 'Embedded (single-file)'}")
     print()
     print("=" * 70)
     print(" [SUCCESS] Standalone Distribution Packaging Complete!")
@@ -336,19 +348,23 @@ def verify_distribution(paths):
 
 def main():
     parser = argparse.ArgumentParser(description="Build Standalone FNF Fast Converter Executable")
-    parser.add_argument("--console", action="store_true", help="Build with console window visible (for debugging)")
+    parser.add_argument("--windowed", action="store_true", help="Hide console window (not recommended for Web UI)")
+    parser.add_argument("--console", action="store_true", help="Keep console window visible (default)")
+    parser.add_argument("--onedir", action="store_true", help="Build directory bundle instead of single executable")
     parser.add_argument("--no-clean", action="store_true", help="Skip cleaning previous build artifacts")
     args = parser.parse_args()
     
     paths = get_project_paths()
+    onefile = not args.onedir
+    windowed = args.windowed and not args.console
     
     try:
         check_prerequisites()
         if not args.no_clean:
             clean_previous_builds(paths)
-        cmd = build_pyinstaller_command(paths, windowed=not args.console)
+        cmd = build_pyinstaller_command(paths, windowed=windowed, onefile=onefile)
         execute_build(cmd)
-        copy_distribution_assets(paths)
+        copy_distribution_assets(paths, onefile=onefile)
         verify_distribution(paths)
         return 0
     except Exception as exc:
